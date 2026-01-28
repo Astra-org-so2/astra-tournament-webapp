@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="https://Noscopch.github.io/astra-tournament-webapp/">
+    <title>Astra Tournament - Регистрация команды</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-crown"></i>
+                <h1>Astra Tournament</h1>
+            </div>
+            <div class="tournament-info" id="tournamentInfo">
+                <!-- Информация о турнире загружается динамически -->
+            </div>
+        </header>
+
+        <main>
+            <div class="status-message" id="statusMessage">
+                <!-- Сообщения о статусе -->
+            </div>
+
+            <div class="registration-form" id="registrationForm">
+                <div class="form-section">
+                    <h2><i class="fas fa-users"></i> Информация о команде</h2>
+                    
+                    <div class="form-group">
+                        <label for="teamName">
+                            <i class="fas fa-flag"></i> Название команды *
+                        </label>
+                        <input type="text" id="teamName" placeholder="Введите название команды" maxlength="32">
+                        <small>Максимум 32 символа</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="teamTag">
+                            <i class="fas fa-hashtag"></i> Тег команды *
+                        </label>
+                        <input type="text" id="teamTag" placeholder="ASTRA" maxlength="6">
+                        <small>Максимум 6 символов (буквы и цифры)</small>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2><i class="fas fa-crown"></i> Капитан команды</h2>
+                    
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-user-shield"></i> Telegram ID капитана
+                        </label>
+                        <div class="input-with-button">
+                            <input type="text" id="captainId" readonly>
+                            <button type="button" id="copyCaptainId" class="btn-icon">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                        <small>Ваш ID: <span id="captainIdDisplay"></span></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="captainNickname">
+                            <i class="fas fa-gamepad"></i> Игровой никнейм капитана *
+                        </label>
+                        <input type="text" id="captainNickname" placeholder="Введите ваш игровой никнейм">
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2><i class="fas fa-user-friends"></i> Основной состав (4 человека)</h2>
+                    
+                    <div class="player-grid">
+                        <div class="player-card">
+                            <h4><i class="fas fa-user"></i> Игрок 2 *</h4>
+                            <div class="form-group">
+                                <label>Telegram ID</label>
+                                <input type="number" id="player2Id" placeholder="Введите Telegram ID" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Игровой никнейм *</label>
+                                <input type="text" id="player2Nickname" placeholder="Введите никнейм игрока">
+                            </div>
+                        </div>
+                        
+                        <div class="player-card">
+                            <h4><i class="fas fa-user"></i> Игрок 3 *</h4>
+                            <div class="form-group">
+                                <label>Telegram ID</label>
+                                <input type="number" id="player3Id" placeholder="Введите Telegram ID" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Игровой никнейм *</label>
+                                <input type="text" id="player3Nickname" placeholder="Введите никнейм игрока">
+                            </div>
+                        </div>
+                        
+                        <div class="player-card">
+                            <h4><i class="fas fa-user"></i> Игрок 4 *</h4>
+                            <div class="form-group">
+                                <label>Telegram ID</label>
+                                <input type="number" id="player4Id" placeholder="Введите Telegram ID" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Игровой никнейм *</label>
+                                <input type="text" id="player4Nickname" placeholder="Введите никнейм игрока">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2><i class="fas fa-user-plus"></i> Дополнительные игроки (опционально)</h2>
+                    
+                    <div class="player-grid">
+                        <div class="player-card optional">
+                            <h4><i class="fas fa-user"></i> Игрок 5</h4>
+                            <div class="form-group">
+                                <label>Telegram ID</label>
+                                <input type="number" id="player5Id" placeholder="Опционально" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Игровой никнейм</label>
+                                <input type="text" id="player5Nickname" placeholder="Опционально">
+                            </div>
+                        </div>
+                        
+                        <div class="player-card optional">
+                            <h4><i class="fas fa-user"></i> Игрок 6</h4>
+                            <div class="form-group">
+                                <label>Telegram ID</label>
+                                <input type="number" id="player6Id" placeholder="Опционально" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label>Игровой никнейм</label>
+                                <input type="text" id="player6Nickname" placeholder="Опционально">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h2><i class="fas fa-address-book"></i> Контактные данные</h2>
+                    
+                    <div class="form-group">
+                        <label for="contactInfo">
+                            <i class="fas fa-link"></i> Контакты для связи *
+                        </label>
+                        <input type="text" id="contactInfo" 
+                               placeholder="@username_telegram или vk.com/your_profile">
+                        <small>Только Telegram или VK</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additionalInfo">
+                            <i class="fas fa-sticky-note"></i> Дополнительная информация
+                        </label>
+                        <textarea id="additionalInfo" 
+                                  placeholder="Комментарии, пожелания, дополнительная информация..." 
+                                  rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="form-notice">
+                    <i class="fas fa-info-circle"></i>
+                    <p>Все поля помеченные * обязательны для заполнения. После регистрации изменения будут невозможны.</p>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="submitBtn" class="btn-primary btn-large">
+                        <i class="fas fa-paper-plane"></i> Зарегистрировать команду
+                    </button>
+                    <button type="button" id="clearBtn" class="btn-secondary">
+                        <i class="fas fa-eraser"></i> Очистить форму
+                    </button>
+                </div>
+            </div>
+
+            <div class="success-message" id="successMessage" style="display: none;">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Регистрация успешна!</h3>
+                <p>Ваша команда <strong id="successTeamName"></strong> зарегистрирована на турнир.</p>
+                <p>Ожидайте подтверждения от организаторов.</p>
+                <div class="success-actions">
+                    <button type="button" id="closeBtn" class="btn-primary">
+                        <i class="fas fa-check"></i> Готово
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p><i class="fas fa-shield-alt"></i> Astra Organization System © 2026</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+    
+    <!-- Для работы с Telegram WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</body>
+</html>
