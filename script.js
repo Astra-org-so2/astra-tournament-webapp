@@ -1,12 +1,12 @@
 class RegistrationApp {
     constructor() {
-        this.API_BASE_URL = 'https://script.google.com/macros/s/AKfycbxq6zwhU3mcqPsn8nS9Rb2-J3ChyEsirqR-DQnJdO7T10uWIKhl1ULlEQckZFC3Dr4HLA/exec';
+        // ВАШ РЕАЛЬНЫЙ URL ЗДЕСЬ!
+        this.API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyEfGh7OsYQo_nuWetV--MKHkVDUdWyCDOfXZJKuPIBMkFLSDtlysdNiOdi8BijSbiAgg/exec';
         this.tournamentId = null;
         this.captainId = null;
         this.isRegistered = false;
         this.currentTournament = null;
         this.init();
-    }
 
     init() {
         this.getUrlParams();
@@ -543,4 +543,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     `;
     document.head.appendChild(style);
+
 });
