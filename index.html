@@ -3,207 +3,979 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="https://astra-org-so2.github.io/astra-tournament-webapp/">
-    <base href="https://Noscopch.github.io/astra-tournament-webapp/">
-    <title>Astra Tournament - Регистрация команды</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Astra Tournament S1 | Astra Org</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #007AFF;
+            --primary-dark: #0056CC;
+            --bg: #F2F2F7;
+            --card-bg: rgba(255, 255, 255, 0.8);
+            --text: #000000;
+            --text-secondary: #8E8E93;
+            --border: #C7C7CC;
+            --success: #34C759;
+            --warning: #FF9500;
+            --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+            --blur: blur(20px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 20px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(0, 122, 255, 0.05) 0%, transparent 20%),
+                radial-gradient(circle at 90% 80%, rgba(0, 122, 255, 0.05) 0%, transparent 20%);
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: var(--blur);
+            -webkit-backdrop-filter: var(--blur);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 42px;
+            margin-bottom: 10px;
+            color: var(--primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo i {
+            filter: drop-shadow(0 4px 6px rgba(0, 122, 255, 0.3));
+        }
+
+        .tournament-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--primary), #5856D6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tournament-subtitle {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+        }
+
+        .status-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            background: var(--card-bg);
+            backdrop-filter: var(--blur);
+            border-radius: 16px;
+            padding: 16px 24px;
+            text-align: center;
+            min-width: 150px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .status-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            background-color: var(--success);
+            color: white;
+            margin-top: 10px;
+        }
+
+        .form-container {
+            display: none;
+        }
+
+        .form-container.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .form-section {
+            margin-bottom: 28px;
+        }
+
+        .form-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-title i {
+            font-size: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text);
+            font-size: 16px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background-color: rgba(255, 255, 255, 0.9);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+        }
+
+        .player-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+
+        .player-id {
+            flex: 2;
+        }
+
+        .player-nickname {
+            flex: 3;
+        }
+
+        .player-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            display: block;
+        }
+
+        .contacts-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .contacts-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .button {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 18px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 122, 255, 0.2);
+        }
+
+        .button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+        }
+
+        .button:active {
+            transform: translateY(0);
+        }
+
+        .button:disabled {
+            background-color: var(--border);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .register-button {
+            margin-top: 30px;
+        }
+
+        .success-message {
+            text-align: center;
+            padding: 40px 20px;
+            display: none;
+        }
+
+        .success-message.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            color: var(--success);
+            margin-bottom: 20px;
+        }
+
+        .success-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--success);
+        }
+
+        .success-text {
+            font-size: 18px;
+            color: var(--text-secondary);
+            margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .teams-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .team-card {
+            background: var(--card-bg);
+            backdrop-filter: var(--blur);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .team-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .team-tag {
+            display: inline-block;
+            background-color: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .team-contacts {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 10px;
+        }
+
+        .contact-icon {
+            margin-right: 8px;
+            color: var(--primary);
+        }
+
+        .tab-container {
+            display: flex;
+            margin-bottom: 24px;
+            border-radius: 14px;
+            overflow: hidden;
+            background-color: rgba(255, 255, 255, 0.6);
+            backdrop-filter: var(--blur);
+            box-shadow: var(--shadow);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .tab.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .info-text {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .divider {
+            height: 1px;
+            background-color: var(--border);
+            margin: 24px 0;
+            opacity: 0.5;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--success);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+            
+            .tournament-title {
+                font-size: 28px;
+            }
+            
+            .status-item {
+                min-width: 120px;
+                padding: 12px 16px;
+            }
+            
+            .player-row {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .player-id, .player-nickname {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header>
+        <div class="header">
             <div class="logo">
-                <i class="fas fa-crown"></i>
-                <h1>Astra Tournament</h1>
+                <i class="fas fa-trophy"></i>
+                <span>Astra Org</span>
             </div>
-            <div class="tournament-info" id="tournamentInfo">
-                <!-- Информация о турнире загружается динамически -->
+            <h1 class="tournament-title">Astra Tournament S1</h1>
+            <p class="tournament-subtitle">Турнир по Standoff 2</p>
+            
+            <div class="status-container">
+                <div class="status-item">
+                    <div class="status-label">СТАТУС</div>
+                    <div class="status-value">Регистрация</div>
+                    <div class="status-badge">ОТКРЫТА</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">НАЧАЛО</div>
+                    <div class="status-value" id="startDate">15.10.2023</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">КОМАНД</div>
+                    <div class="status-value" id="teamsCount">24</div>
+                </div>
             </div>
-        </header>
+        </div>
 
-        <main>
-            <div class="status-message" id="statusMessage">
-                <!-- Сообщения о статусе -->
+        <div class="tab-container">
+            <div class="tab active" data-tab="info">Информация</div>
+            <div class="tab" data-tab="register">Регистрация</div>
+            <div class="tab" data-tab="teams">Участники</div>
+        </div>
+
+        <div class="tab-content active" id="info-tab">
+            <div class="card">
+                <h2 class="form-title"><i class="fas fa-info-circle"></i> О турнире</h2>
+                <p>Добро пожаловать на турнир Astra Tournament S1 по Standoff 2 от организации Astra Org!</p>
+                <div class="divider"></div>
+                <p><strong>Формат:</strong> 5x5, Single Elimination</p>
+                <p><strong>Призовой фонд:</strong> 50.000 рублей</p>
+                <p><strong>Дата начала:</strong> 15 октября 2023</p>
+                <p><strong>Регистрация:</strong> до 10 октября 2023</p>
+                <div class="divider"></div>
+                <p>Для участия необходимо собрать команду из 5 основных игроков и 1 запасного. Капитан команды заполняет форму регистрации.</p>
             </div>
+            
+            <div class="card">
+                <h2 class="form-title"><i class="fas fa-user-check"></i> Ваш статус</h2>
+                <p id="userStatus">Вы еще не зарегистрированы на турнир</p>
+                <button class="button register-button" id="goToRegisterBtn">Зарегистрировать команду</button>
+            </div>
+        </div>
 
-            <div class="registration-form" id="registrationForm">
-                <div class="form-section">
-                    <h2><i class="fas fa-users"></i> Информация о команде</h2>
+        <div class="tab-content" id="register-tab">
+            <div class="card">
+                <h2 class="form-title"><i class="fas fa-users"></i> Регистрация команды</h2>
+                <p>Заполните форму ниже для регистрации вашей команды на турнир.</p>
+                <div class="divider"></div>
+                
+                <form id="registrationForm">
+                    <div class="form-section">
+                        <h3 class="form-title"><i class="fas fa-flag"></i> Информация о команде</h3>
+                        <div class="input-group">
+                            <label class="input-label">Название команды *</label>
+                            <input type="text" class="input-field" id="teamName" required placeholder="Введите название команды">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Тег команды *</label>
+                            <input type="text" class="input-field" id="teamTag" required placeholder="Например: ASTRA" maxlength="6">
+                            <p class="info-text">Максимум 6 символов, будет отображаться в таблице участников</p>
+                        </div>
+                    </div>
                     
-                    <div class="form-group">
-                        <label for="teamName">
-                            <i class="fas fa-flag"></i> Название команды *
-                        </label>
-                        <input type="text" id="teamName" placeholder="Введите название команды" maxlength="32">
-                        <small>Максимум 32 символа</small>
+                    <div class="form-section">
+                        <h3 class="form-title"><i class="fas fa-gamepad"></i> Основной состав (5 игроков) *</h3>
+                        <div id="mainPlayers">
+                            <!-- Основные игроки будут добавлены через JS -->
+                        </div>
                     </div>
-
-                    <div class="form-group">
-                        <label for="teamTag">
-                            <i class="fas fa-hashtag"></i> Тег команды *
-                        </label>
-                        <input type="text" id="teamTag" placeholder="ASTRA" maxlength="6">
-                        <small>Максимум 6 символов (буквы и цифры)</small>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h2><i class="fas fa-crown"></i> Капитан команды</h2>
                     
-                    <div class="form-group">
-                        <label>
-                            <i class="fas fa-user-shield"></i> Telegram ID капитана
-                        </label>
-                        <div class="input-with-button">
-                            <input type="text" id="captainId" readonly>
-                            <button type="button" id="copyCaptainId" class="btn-icon">
-                                <i class="fas fa-copy"></i>
-                            </button>
+                    <div class="form-section">
+                        <h3 class="form-title"><i class="fas fa-user-plus"></i> Запасной игрок *</h3>
+                        <div class="player-row">
+                            <div class="player-id">
+                                <label class="player-label">Игровое ID</label>
+                                <input type="text" class="input-field reserve-id" required placeholder="ID игрока">
+                            </div>
+                            <div class="player-nickname">
+                                <label class="player-label">Никнейм</label>
+                                <input type="text" class="input-field reserve-nickname" required placeholder="Никнейм">
+                            </div>
                         </div>
-                        <small>Ваш ID: <span id="captainIdDisplay"></span></small>
                     </div>
-
-                    <div class="form-group">
-                        <label for="captainNickname">
-                            <i class="fas fa-gamepad"></i> Игровой никнейм капитана *
-                        </label>
-                        <input type="text" id="captainNickname" placeholder="Введите ваш игровой никнейм">
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h2><i class="fas fa-user-friends"></i> Основной состав (4 человека)</h2>
                     
-                    <div class="player-grid">
-                        <div class="player-card">
-                            <h4><i class="fas fa-user"></i> Игрок 2 *</h4>
-                            <div class="form-group">
-                                <label>Telegram ID</label>
-                                <input type="number" id="player2Id" placeholder="Введите Telegram ID" min="1">
+                    <div class="form-section">
+                        <h3 class="form-title"><i class="fas fa-address-book"></i> Контакты для связи *</h3>
+                        <p class="info-text">Укажите хотя бы один способ связи для оперативной связи с организаторами</p>
+                        <div class="contacts-group">
+                            <div class="input-group">
+                                <label class="input-label">Telegram</label>
+                                <input type="text" class="input-field" id="telegram" placeholder="@username">
                             </div>
-                            <div class="form-group">
-                                <label>Игровой никнейм *</label>
-                                <input type="text" id="player2Nickname" placeholder="Введите никнейм игрока">
-                            </div>
-                        </div>
-                        
-                        <div class="player-card">
-                            <h4><i class="fas fa-user"></i> Игрок 3 *</h4>
-                            <div class="form-group">
-                                <label>Telegram ID</label>
-                                <input type="number" id="player3Id" placeholder="Введите Telegram ID" min="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Игровой никнейм *</label>
-                                <input type="text" id="player3Nickname" placeholder="Введите никнейм игрока">
-                            </div>
-                        </div>
-                        
-                        <div class="player-card">
-                            <h4><i class="fas fa-user"></i> Игрок 4 *</h4>
-                            <div class="form-group">
-                                <label>Telegram ID</label>
-                                <input type="number" id="player4Id" placeholder="Введите Telegram ID" min="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Игровой никнейм *</label>
-                                <input type="text" id="player4Nickname" placeholder="Введите никнейм игрока">
+                            <div class="input-group">
+                                <label class="input-label">ВКонтакте</label>
+                                <input type="text" class="input-field" id="vk" placeholder="Ссылка или ID">
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="form-section">
-                    <h2><i class="fas fa-user-plus"></i> Дополнительные игроки (опционально)</h2>
                     
-                    <div class="player-grid">
-                        <div class="player-card optional">
-                            <h4><i class="fas fa-user"></i> Игрок 5</h4>
-                            <div class="form-group">
-                                <label>Telegram ID</label>
-                                <input type="number" id="player5Id" placeholder="Опционально" min="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Игровой никнейм</label>
-                                <input type="text" id="player5Nickname" placeholder="Опционально">
-                            </div>
-                        </div>
-                        
-                        <div class="player-card optional">
-                            <h4><i class="fas fa-user"></i> Игрок 6</h4>
-                            <div class="form-group">
-                                <label>Telegram ID</label>
-                                <input type="number" id="player6Id" placeholder="Опционально" min="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Игровой никнейм</label>
-                                <input type="text" id="player6Nickname" placeholder="Опционально">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <h2><i class="fas fa-address-book"></i> Контактные данные</h2>
+                    <div class="divider"></div>
                     
-                    <div class="form-group">
-                        <label for="contactInfo">
-                            <i class="fas fa-link"></i> Контакты для связи *
-                        </label>
-                        <input type="text" id="contactInfo" 
-                               placeholder="@username_telegram или vk.com/your_profile">
-                        <small>Только Telegram или VK</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="additionalInfo">
-                            <i class="fas fa-sticky-note"></i> Дополнительная информация
-                        </label>
-                        <textarea id="additionalInfo" 
-                                  placeholder="Комментарии, пожелания, дополнительная информация..." 
-                                  rows="3"></textarea>
-                    </div>
-                </div>
-
-                <div class="form-notice">
-                    <i class="fas fa-info-circle"></i>
-                    <p>Все поля помеченные * обязательны для заполнения. После регистрации изменения будут невозможны.</p>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" id="submitBtn" class="btn-primary btn-large">
-                        <i class="fas fa-paper-plane"></i> Зарегистрировать команду
+                    <button type="submit" class="button" id="submitBtn">
+                        <span id="submitText">Отправить заявку</span>
                     </button>
-                    <button type="button" id="clearBtn" class="btn-secondary">
-                        <i class="fas fa-eraser"></i> Очистить форму
-                    </button>
-                </div>
+                    <p class="info-text">После отправки вы не сможете изменить данные команды. Проверьте правильность введенной информации.</p>
+                </form>
             </div>
+        </div>
 
-            <div class="success-message" id="successMessage" style="display: none;">
-                <div class="success-icon">
-                    <i class="fas fa-check-circle"></i>
+        <div class="tab-content" id="teams-tab">
+            <div class="card">
+                <h2 class="form-title"><i class="fas fa-list-ol"></i> Зарегистрированные команды</h2>
+                <p>Список команд, уже зарегистрированных на турнир</p>
+                <div class="divider"></div>
+                
+                <div class="teams-list" id="teamsList">
+                    <!-- Команды будут загружены через JS -->
                 </div>
-                <h3>Регистрация успешна!</h3>
-                <p>Ваша команда <strong id="successTeamName"></strong> зарегистрирована на турнир.</p>
-                <p>Ожидайте подтверждения от организаторов.</p>
-                <div class="success-actions">
-                    <button type="button" id="closeBtn" class="btn-primary">
-                        <i class="fas fa-check"></i> Готово
-                    </button>
-                </div>
+                
+                <div class="divider"></div>
+                <p class="info-text">Всего зарегистрировано: <span id="teamsCountDisplay">24</span> команд(ы)</p>
             </div>
-        </main>
+        </div>
 
-        <footer>
-            <p><i class="fas fa-shield-alt"></i> Astra Organization System © 2026</p>
-        </footer>
+        <div class="card success-message" id="successMessage">
+            <div class="success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <h2 class="success-title">Заявка отправлена!</h2>
+            <p class="success-text">Ваша команда успешно зарегистрирована на турнир Astra Tournament S1. Организаторы свяжутся с вами в ближайшее время для подтверждения участия.</p>
+            <div class="divider"></div>
+            <p class="info-text">Вы можете просмотреть список всех участников во вкладке "Участники".</p>
+            <button class="button" id="backToInfoBtn">Вернуться к информации</button>
+        </div>
+
+        <div class="footer">
+            <p>Организатор: <strong>Astra Org</strong> | Турнир: <strong>Astra Tournament S1</strong></p>
+            <p>По всем вопросам: <a href="mailto:astra.org@example.com">astra.org@example.com</a></p>
+        </div>
     </div>
 
-    <script src="script.js"></script>
-    
-    <!-- Для работы с Telegram WebApp -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</body>
+    <div class="notification" id="notification"></div>
 
+    <script>
+        // Имитация данных о командах (в реальном приложении будут загружаться из Google Sheets)
+        let registeredTeams = [
+            { name: "Cyber Warriors", tag: "CYBER", contacts: { telegram: "@cyber_cap", vk: "vk.com/cyber_cap" } },
+            { name: "Shadow Squad", tag: "SHADOW", contacts: { telegram: "@shadow_leader", vk: "" } },
+            { name: "Phoenix Rising", tag: "PHOENIX", contacts: { telegram: "", vk: "vk.com/phoenix_team" } },
+            { name: "Apex Predators", tag: "APEX", contacts: { telegram: "@apex_pred", vk: "vk.com/apex_pred" } },
+            { name: "Neon Strike", tag: "NEON", contacts: { telegram: "@neon_cap", vk: "" } },
+            { name: "Frost Giants", tag: "FROST", contacts: { telegram: "", vk: "vk.com/frost_giants" } },
+        ];
+
+        // Элементы DOM
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const teamsCountElement = document.getElementById('teamsCount');
+        const teamsCountDisplay = document.getElementById('teamsCountDisplay');
+        const teamsListElement = document.getElementById('teamsList');
+        const registrationForm = document.getElementById('registrationForm');
+        const successMessage = document.getElementById('successMessage');
+        const goToRegisterBtn = document.getElementById('goToRegisterBtn');
+        const backToInfoBtn = document.getElementById('backToInfoBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const userStatusElement = document.getElementById('userStatus');
+        const notification = document.getElementById('notification');
+        const mainPlayersContainer = document.getElementById('mainPlayers');
+
+        // Проверяем, зарегистрирован ли уже пользователь
+        const isRegistered = localStorage.getItem('astraTournamentRegistered') === 'true';
+
+        // Инициализация приложения
+        document.addEventListener('DOMContentLoaded', function() {
+            // Обновляем количество команд
+            updateTeamsCount();
+            
+            // Загружаем список команд
+            renderTeamsList();
+            
+            // Создаем поля для основных игроков
+            createMainPlayerFields();
+            
+            // Устанавливаем статус пользователя
+            updateUserStatus();
+            
+            // Настраиваем обработчики событий
+            setupEventListeners();
+        });
+
+        // Создание полей для основных игроков
+        function createMainPlayerFields() {
+            mainPlayersContainer.innerHTML = '';
+            
+            for (let i = 1; i <= 5; i++) {
+                const playerRow = document.createElement('div');
+                playerRow.className = 'player-row';
+                playerRow.innerHTML = `
+                    <div class="player-id">
+                        <label class="player-label">Игровое ID игрока ${i} *</label>
+                        <input type="text" class="input-field main-id" required placeholder="ID игрока ${i}">
+                    </div>
+                    <div class="player-nickname">
+                        <label class="player-label">Никнейм игрока ${i} *</label>
+                        <input type="text" class="input-field main-nickname" required placeholder="Никнейм игрока ${i}">
+                    </div>
+                `;
+                mainPlayersContainer.appendChild(playerRow);
+            }
+        }
+
+        // Обновление количества команд
+        function updateTeamsCount() {
+            const count = registeredTeams.length;
+            teamsCountElement.textContent = count;
+            teamsCountDisplay.textContent = count;
+        }
+
+        // Обновление статуса пользователя
+        function updateUserStatus() {
+            if (isRegistered) {
+                userStatusElement.textContent = "Ваша команда уже зарегистрирована на турнир";
+                userStatusElement.style.color = "var(--success)";
+                goToRegisterBtn.style.display = "none";
+            } else {
+                userStatusElement.textContent = "Вы еще не зарегистрированы на турнир";
+                userStatusElement.style.color = "var(--warning)";
+                goToRegisterBtn.style.display = "block";
+            }
+        }
+
+        // Отрисовка списка команд
+        function renderTeamsList() {
+            teamsListElement.innerHTML = '';
+            
+            if (registeredTeams.length === 0) {
+                teamsListElement.innerHTML = '<p>Пока ни одна команда не зарегистрирована</p>';
+                return;
+            }
+            
+            registeredTeams.forEach(team => {
+                const teamCard = document.createElement('div');
+                teamCard.className = 'team-card';
+                
+                let contactsHTML = '';
+                if (team.contacts.telegram) {
+                    contactsHTML += `<div><i class="fab fa-telegram contact-icon"></i> ${team.contacts.telegram}</div>`;
+                }
+                if (team.contacts.vk) {
+                    contactsHTML += `<div><i class="fab fa-vk contact-icon"></i> ${team.contacts.vk}</div>`;
+                }
+                
+                teamCard.innerHTML = `
+                    <div class="team-name">${team.name}</div>
+                    <div class="team-tag">${team.tag}</div>
+                    <div class="team-contacts">${contactsHTML}</div>
+                `;
+                
+                teamsListElement.appendChild(teamCard);
+            });
+        }
+
+        // Настройка обработчиков событий
+        function setupEventListeners() {
+            // Обработчики для вкладок
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    
+                    // Активируем выбранную вкладку
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Показываем соответствующий контент
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === `${tabId}-tab`) {
+                            content.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+            // Кнопка перехода к регистрации
+            goToRegisterBtn.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                document.querySelector('.tab[data-tab="register"]').classList.add('active');
+                document.getElementById('register-tab').classList.add('active');
+            });
+
+            // Кнопка возврата к информации
+            backToInfoBtn.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                document.querySelector('.tab[data-tab="info"]').classList.add('active');
+                document.getElementById('info-tab').classList.add('active');
+                successMessage.classList.remove('active');
+            });
+
+            // Обработка отправки формы
+            registrationForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (isRegistered) {
+                    showNotification("Вы уже зарегистрированы на турнир", "warning");
+                    return;
+                }
+                
+                // Валидация формы
+                if (!validateForm()) {
+                    showNotification("Заполните все обязательные поля правильно", "warning");
+                    return;
+                }
+                
+                // Собираем данные формы
+                const formData = collectFormData();
+                
+                // Показываем индикатор загрузки
+                submitBtn.disabled = true;
+                submitText.innerHTML = '<div class="loading"></div> Отправка...';
+                
+                // Имитация отправки данных на сервер
+                setTimeout(() => {
+                    // В реальном приложении здесь будет отправка данных в Google Sheets
+                    // Для демонстрации имитируем успешную отправку
+                    
+                    // Добавляем команду в список
+                    registeredTeams.push({
+                        name: formData.teamName,
+                        tag: formData.teamTag,
+                        contacts: {
+                            telegram: formData.telegram,
+                            vk: formData.vk
+                        }
+                    });
+                    
+                    // Обновляем интерфейс
+                    updateTeamsCount();
+                    renderTeamsList();
+                    
+                    // Сохраняем статус регистрации в localStorage
+                    localStorage.setItem('astraTournamentRegistered', 'true');
+                    localStorage.setItem('teamData', JSON.stringify(formData));
+                    
+                    // Показываем сообщение об успехе
+                    registrationForm.reset();
+                    successMessage.classList.add('active');
+                    document.getElementById('register-tab').classList.remove('active');
+                    
+                    // Сбрасываем кнопку отправки
+                    submitBtn.disabled = false;
+                    submitText.textContent = 'Отправить заявку';
+                    
+                    // Обновляем статус пользователя
+                    updateUserStatus();
+                    
+                    // Показываем уведомление
+                    showNotification("Команда успешно зарегистрирована!", "success");
+                    
+                    // Для реального использования: инструкция по настройке Google Sheets
+                    console.log("Данные для отправки в Google Sheets:");
+                    console.log(JSON.stringify(formData, null, 2));
+                    console.log("\n--- ИНСТРУКЦИЯ ПО ИНТЕГРАЦИИ С GOOGLE SHEETS ---");
+                    console.log("1. Создайте Google Sheets таблицу с двумя листами: 'Участники' и 'Все данные'");
+                    console.log("2. Настройте Google Apps Script для приема данных из формы");
+                    console.log("3. Замените URL в функции sendToGoogleSheets на ваш веб-приложение Apps Script");
+                    console.log("4. Добавьте обработку CORS в вашем скрипте");
+                    console.log("5. В реальном приложении используйте fetch() для отправки данных на ваш скрипт");
+                }, 1500);
+            });
+        }
+
+        // Валидация формы
+        function validateForm() {
+            // Проверяем основные поля
+            const teamName = document.getElementById('teamName').value.trim();
+            const teamTag = document.getElementById('teamTag').value.trim();
+            const telegram = document.getElementById('telegram').value.trim();
+            const vk = document.getElementById('vk').value.trim();
+            
+            if (!teamName || !teamTag) {
+                return false;
+            }
+            
+            // Должен быть указан хотя бы один контакт
+            if (!telegram && !vk) {
+                return false;
+            }
+            
+            // Проверяем игроков
+            const mainIds = document.querySelectorAll('.main-id');
+            const mainNicks = document.querySelectorAll('.main-nickname');
+            const reserveId = document.querySelector('.reserve-id').value.trim();
+            const reserveNick = document.querySelector('.reserve-nickname').value.trim();
+            
+            for (let i = 0; i < mainIds.length; i++) {
+                if (!mainIds[i].value.trim() || !mainNicks[i].value.trim()) {
+                    return false;
+                }
+            }
+            
+            if (!reserveId || !reserveNick) {
+                return false;
+            }
+            
+            return true;
+        }
+
+        // Сбор данных формы
+        function collectFormData() {
+            const teamName = document.getElementById('teamName').value.trim();
+            const teamTag = document.getElementById('teamTag').value.trim().toUpperCase();
+            const telegram = document.getElementById('telegram').value.trim();
+            const vk = document.getElementById('vk').value.trim();
+            
+            // Собираем данных об основных игроках
+            const mainPlayers = [];
+            const mainIds = document.querySelectorAll('.main-id');
+            const mainNicks = document.querySelectorAll('.main-nickname');
+            
+            for (let i = 0; i < mainIds.length; i++) {
+                mainPlayers.push({
+                    id: mainIds[i].value.trim(),
+                    nickname: mainNicks[i].value.trim()
+                });
+            }
+            
+            // Данные о запасном игроке
+            const reservePlayer = {
+                id: document.querySelector('.reserve-id').value.trim(),
+                nickname: document.querySelector('.reserve-nickname').value.trim()
+            };
+            
+            return {
+                teamName,
+                teamTag,
+                players: mainPlayers,
+                reservePlayer,
+                contacts: {
+                    telegram,
+                    vk
+                },
+                registrationDate: new Date().toISOString()
+            };
+        }
+
+        // Функция для показа уведомлений
+        function showNotification(message, type = "info") {
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            // Устанавливаем цвет в зависимости от типа
+            if (type === "success") {
+                notification.style.backgroundColor = "var(--success)";
+            } else if (type === "warning") {
+                notification.style.backgroundColor = "var(--warning)";
+            } else {
+                notification.style.backgroundColor = "var(--primary)";
+            }
+            
+            // Скрываем уведомление через 5 секунд
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+
+        // Функция для отправки данных в Google Sheets (пример)
+        // В реальном приложении нужно разкомментировать и настроить
+        /*
+        async function sendToGoogleSheets(formData) {
+            // URL вашего Google Apps Script веб-приложения
+            const scriptURL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+            
+            try {
+                const response = await fetch(scriptURL, {
+                    method: 'POST',
+                    mode: 'no-cors', // Важно для работы с Google Apps Script
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                // В реальном приложении здесь будет обработка ответа
+                console.log('Данные отправлены в Google Sheets');
+                return true;
+            } catch (error) {
+                console.error('Ошибка при отправке данных:', error);
+                return false;
+            }
+        }
+        */
+    </script>
+</body>
 </html>
