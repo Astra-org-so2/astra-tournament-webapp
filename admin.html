@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель | Astra Tournament</title>
+    <link rel="stylesheet" href="admin-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <div class="admin-logo">
+                <i class="fas fa-shield-alt"></i>
+                <h1>Админ-панель Astra Tournament</h1>
+            </div>
+            <div class="admin-user" id="adminUser">
+                <i class="fas fa-user-circle"></i>
+                <span>Администратор</span>
+                <button class="button button-small" id="logoutBtn">Выйти</button>
+            </div>
+        </div>
+
+        <div class="admin-login" id="loginPanel">
+            <div class="login-card">
+                <h2><i class="fas fa-lock"></i> Вход в админ-панель</h2>
+                <div class="input-group">
+                    <label class="input-label">Пароль администратора</label>
+                    <input type="password" class="input-field" id="adminPassword" placeholder="Введите пароль">
+                    <div class="error-text" id="passwordError"></div>
+                </div>
+                <button class="button" id="loginBtn">Войти</button>
+                <p class="info-text">По умолчанию пароль: astra2023</p>
+            </div>
+        </div>
+
+        <div class="admin-content" id="adminContent" style="display: none;">
+            <div class="admin-sidebar">
+                <div class="sidebar-menu">
+                    <button class="menu-btn active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Панель управления
+                    </button>
+                    <button class="menu-btn" data-section="teams">
+                        <i class="fas fa-users"></i> Команды
+                    </button>
+                    <button class="menu-btn" data-section="tournament">
+                        <i class="fas fa-trophy"></i> Турнир
+                    </button>
+                    <button class="menu-btn" data-section="settings">
+                        <i class="fas fa-cog"></i> Настройки
+                    </button>
+                    <button class="menu-btn" data-section="export">
+                        <i class="fas fa-download"></i> Экспорт данных
+                    </button>
+                </div>
+                
+                <div class="sidebar-stats">
+                    <h3>Статистика</h3>
+                    <div class="stat-item">
+                        <span class="stat-label">Всего команд:</span>
+                        <span class="stat-value" id="statTotalTeams">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Подтверждено:</span>
+                        <span class="stat-value" id="statConfirmedTeams">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Ожидают:</span>
+                        <span class="stat-value" id="statPendingTeams">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Отклонено:</span>
+                        <span class="stat-value" id="statRejectedTeams">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-main">
+                <!-- Панель управления -->
+                <div class="section active" id="dashboard-section">
+                    <h2><i class="fas fa-tachometer-alt"></i> Панель управления</h2>
+                    
+                    <div class="dashboard-cards">
+                        <div class="dashboard-card">
+                            <div class="card-icon" style="background-color: var(--primary-light);">
+                                <i class="fas fa-users" style="color: var(--primary);"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>Команды</h3>
+                                <p class="card-value" id="dashboardTotalTeams">0</p>
+                                <p class="card-label">Всего зарегистрировано</p>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card">
+                            <div class="card-icon" style="background-color: rgba(52, 199, 89, 0.1);">
+                                <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>Подтверждено</h3>
+                                <p class="card-value" id="dashboardConfirmedTeams">0</p>
+                                <p class="card-label">Могут участвовать</p>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card">
+                            <div class="card-icon" style="background-color: rgba(255, 149, 0, 0.1);">
+                                <i class="fas fa-clock" style="color: var(--warning);"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>Ожидают</h3>
+                                <p class="card-value" id="dashboardPendingTeams">0</p>
+                                <p class="card-label">Требуют проверки</p>
+                            </div>
+                        </div>
+                        
+                        <div class="dashboard-card">
+                            <div class="card-icon" style="background-color: rgba(255, 59, 48, 0.1);">
+                                <i class="fas fa-times-circle" style="color: var(--danger);"></i>
+                            </div>
+                            <div class="card-content">
+                                <h3>Отклонено</h3>
+                                <p class="card-value" id="dashboardRejectedTeams">0</p>
+                                <p class="card-label">Не допущены</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-actions">
+                        <h3>Быстрые действия</h3>
+                        <div class="action-buttons">
+                            <button class="button button-small" id="openRegistrationBtn">
+                                <i class="fas fa-door-open"></i> Открыть регистрацию
+                            </button>
+                            <button class="button button-small button-secondary" id="closeRegistrationBtn">
+                                <i class="fas fa-door-closed"></i> Закрыть регистрацию
+                            </button>
+                            <button class="button button-small button-secondary" id="exportAllBtn">
+                                <i class="fas fa-file-export"></i> Экспорт всех данных
+                            </button>
+                            <button class="button button-small button-danger" id="clearDataBtn">
+                                <i class="fas fa-trash"></i> Очистить все данные
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="recent-activity">
+                        <h3>Последние регистрации</h3>
+                        <div class="activity-list" id="recentActivity">
+                            <!-- Активность будет загружена через JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Управление командами -->
+                <div class="section" id="teams-section">
+                    <h2><i class="fas fa-users"></i> Управление командами</h2>
+                    
+                    <div class="section-controls">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="teamSearchAdmin" placeholder="Поиск по названию или тегу...">
+                        </div>
+                        <div class="filter-buttons">
+                            <button class="filter-btn active" data-filter="all">Все</button>
+                            <button class="filter-btn" data-filter="pending">Ожидают</button>
+                            <button class="filter-btn" data-filter="confirmed">Подтверждены</button>
+                            <button class="filter-btn" data-filter="rejected">Отклонены</button>
+                        </div>
+                    </div>
+                    
+                    <div class="teams-table-container">
+                        <table class="teams-table" id="teamsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Название</th>
+                                    <th>Тег</th>
+                                    <th>Статус</th>
+                                    <th>Контакты</th>
+                                    <th>Дата регистрации</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="teamsTableBody">
+                                <!-- Данные будут загружены через JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="pagination" id="teamsPagination">
+                        <!-- Пагинация будет добавлена через JS -->
+                    </div>
+                </div>
+
+                <!-- Настройки турнира -->
+                <div class="section" id="tournament-section">
+                    <h2><i class="fas fa-trophy"></i> Настройки турнира</h2>
+                    
+                    <form id="tournamentSettingsForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="input-label">Название турнира *</label>
+                                <input type="text" class="input-field" id="tournamentName" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Статус турнира *</label>
+                                <select class="input-field" id="tournamentStatus" required>
+                                    <option value="registration">Регистрация</option>
+                                    <option value="ongoing">Идет турнир</option>
+                                    <option value="finished">Завершен</option>
+                                    <option value="closed">Закрыт</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Дата начала *</label>
+                                <input type="text" class="input-field" id="tournamentStartDate" required placeholder="ДД.ММ.ГГГГ">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Дата окончания регистрации *</label>
+                                <input type="text" class="input-field" id="tournamentRegEndDate" required placeholder="ДД.ММ.ГГГГ">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Формат турнира *</label>
+                                <input type="text" class="input-field" id="tournamentFormat" required>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Призовой фонд *</label>
+                                <input type="text" class="input-field" id="tournamentPrizePool" required>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label class="input-label">Описание турнира *</label>
+                                <textarea class="input-field" id="tournamentDescription" rows="4" required></textarea>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Максимум команд *</label>
+                                <input type="number" class="input-field" id="tournamentMaxTeams" required min="1" max="100">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="tournamentRequireApproval">
+                                    <span>Требовать подтверждения заявок</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="button">Сохранить настройки</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Настройки системы -->
+                <div class="section" id="settings-section">
+                    <h2><i class="fas fa-cog"></i> Настройки системы</h2>
+                    
+                    <form id="systemSettingsForm">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label class="input-label">Пароль администратора *</label>
+                                <input type="password" class="input-field" id="adminPasswordSetting" required>
+                                <p class="info-text">Используется для входа в админ-панель</p>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="input-label">Email для уведомлений</label>
+                                <input type="email" class="input-field" id="adminEmail">
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label class="input-label">URL Google Sheets</label>
+                                <input type="url" class="input-field" id="googleSheetsUrl" placeholder="https://script.google.com/macros/s/...">
+                                <p class="info-text">Для автоматической отправки данных в Google Sheets</p>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableEmailNotifications">
+                                    <span>Включить email уведомления о новых заявках</span>
+                                </label>
+                            </div>
+                            
+                            <div class="form-group full-width">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableAutoBackup">
+                                    <span>Автоматическое резервное копирование данных</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="button">Сохранить настройки</button>
+                        </div>
+                    </form>
+                    
+                    <div class="settings-actions">
+                        <h3>Дополнительные действия</h3>
+                        <div class="action-buttons">
+                            <button class="button button-secondary" id="backupDataBtn">
+                                <i class="fas fa-save"></i> Создать резервную копию
+                            </button>
+                            <button class="button button-secondary" id="restoreBackupBtn">
+                                <i class="fas fa-upload"></i> Восстановить из резервной копии
+                            </button>
+                            <button class="button button-danger" id="resetDataBtn">
+                                <i class="fas fa-redo"></i> Сбросить все данные
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Экспорт данных -->
+                <div class="section" id="export-section">
+                    <h2><i class="fas fa-download"></i> Экспорт данных</h2>
+                    
+                    <div class="export-options">
+                        <div class="export-card">
+                            <div class="export-icon">
+                                <i class="fas fa-file-excel"></i>
+                            </div>
+                            <h3>Excel/CSV</h3>
+                            <p>Экспорт данных в табличном формате</p>
+                            <div class="export-actions">
+                                <button class="button button-small" id="exportTeamsCsvBtn">
+                                    <i class="fas fa-download"></i> Экспорт команд
+                                </button>
+                                <button class="button button-small button-secondary" id="exportAllDataCsvBtn">
+                                    <i class="fas fa-download"></i> Все данные
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="export-card">
+                            <div class="export-icon">
+                                <i class="fas fa-file-code"></i>
+                            </div>
+                            <h3>JSON</h3>
+                            <p>Полный экспорт всех данных системы</p>
+                            <div class="export-actions">
+                                <button class="button button-small" id="exportJsonBtn">
+                                    <i class="fas fa-download"></i> Экспорт JSON
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="export-card">
+                            <div class="export-icon">
+                                <i class="fas fa-print"></i>
+                            </div>
+                            <h3>Печать</h3>
+                            <p>Распечатать списки и отчеты</p>
+                            <div class="export-actions">
+                                <button class="button button-small" id="printTeamsBtn">
+                                    <i class="fas fa-print"></i> Список команд
+                                </button>
+                                <button class="button button-small button-secondary" id="printConfirmedBtn">
+                                    <i class="fas fa-print"></i> Подтвержденные
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="export-preview">
+                        <h3>Предпросмотр данных</h3>
+                        <div class="preview-controls">
+                            <select class="input-field" id="exportDataType">
+                                <option value="teams">Команды</option>
+                                <option value="all">Все данные</option>
+                                <option value="settings">Настройки</option>
+                            </select>
+                            <button class="button button-small" id="previewDataBtn">Показать предпросмотр</button>
+                        </div>
+                        <div class="preview-content">
+                            <pre id="dataPreview">Выберите тип данных для предпросмотра...</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="teamDetailsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Детали команды</h3>
+                <button class="modal-close" id="closeTeamModal">&times;</button>
+            </div>
+            <div class="modal-body" id="teamDetailsContent">
+                <!-- Данные будут загружены через JS -->
+            </div>
+            <div class="modal-footer">
+                <button class="button button-secondary" id="editTeamBtn">Редактировать</button>
+                <button class="button" id="confirmTeamBtn">Подтвердить</button>
+                <button class="button button-danger" id="rejectTeamBtn">Отклонить</button>
+                <button class="button button-secondary" id="deleteTeamBtn">Удалить</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="editTeamModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Редактирование команды</h3>
+                <button class="modal-close" id="closeEditModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editTeamForm">
+                    <!-- Форма будет заполнена через JS -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="button button-secondary" id="cancelEditBtn">Отмена</button>
+                <button class="button" id="saveTeamBtn">Сохранить изменения</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="backupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Резервное копирование</h3>
+                <button class="modal-close" id="closeBackupModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="backup-options">
+                    <button class="button" id="createBackupBtn">Создать новую резервную копию</button>
+                    <div class="backup-list" id="backupList">
+                        <!-- Список бэкапов будет загружен через JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="adminNotification"></div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>
