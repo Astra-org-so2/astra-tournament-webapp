@@ -1,547 +1,700 @@
-class RegistrationApp {
+// Главный класс приложения
+class AstraTournamentApp {
     constructor() {
-        // ВАШ РЕАЛЬНЫЙ URL ЗДЕСЬ!
-        this.API_BASE_URL = 'https://script.google.com/macros/s/AKfycbyEfGh7OsYQo_nuWetV--MKHkVDUdWyCDOfXZJKuPIBMkFLSDtlysdNiOdi8BijSbiAgg/exec';
-        this.tournamentId = null;
-        this.captainId = null;
-        this.isRegistered = false;
-        this.currentTournament = null;
+        this.dataKey = 'astraTournamentData';
+        this.settingsKey = 'astraTournamentSettings';
+        this.userRegistrationKey = 'userRegistration';
         this.init();
+    }
 
     init() {
-        this.getUrlParams();
-        this.loadTournamentInfo();
+        // Инициализация данных
+        this.initializeData();
+        
+        // Настройка DOM элементов
+        this.setupDOM();
+        
+        // Загрузка данных
+        this.loadData();
+        
+        // Настройка обработчиков событий
         this.setupEventListeners();
-        this.setCaptainId();
+        
+        // Создание полей для игроков
+        this.createPlayerFields();
     }
 
-    getUrlParams() {
-        const urlParams = new URLSearchParams(window.location.search);
-        this.tournamentId = urlParams.get('tournament_id');
-        this.captainId = urlParams.get('captain_id');
-        
-        if (!this.tournamentId || !this.captainId) {
-            this.showError('Неверная ссылка. Пожалуйста, используйте кнопку из Telegram бота.');
-            return;
+    // Инициализация данных в localStorage
+    initializeData() {
+        if (!localStorage.getItem(this.dataKey)) {
+            const initialData = {
+                teams: [],
+                tournament: {
+                    name: "Astra Tournament S1",
+                    status: "registration",
+                    startDate: "15.11.2023",
+                    regEndDate: "10.11.2023",
+                    format: "5x5, Single Elimination",
+                    prizePool: "50.000 рублей",
+                    description: "Добро пожаловать на турнир Astra Tournament S1 по Standoff 2 от организации Astra Org! Приглашаем команды соревноваться за звание лучших."
+                },
+                lastId: 0,
+                settings: {
+                    registrationOpen: true,
+                    maxTeams: 32,
+                    requireApproval: true
+                }
+            };
+            localStorage.setItem(this.dataKey, JSON.stringify(initialData));
         }
         
-        // Показываем ID капитана
-        document.getElementById('captainIdDisplay').textContent = this.captainId;
+        if (!localStorage.getItem(this.settingsKey)) {
+            const settings = {
+                adminPassword: "astra2023",
+                googleSheetsUrl: "",
+                contactEmail: "astra.org@example.com"
+            };
+            localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+        }
     }
 
-    async loadTournamentInfo() {
-        try {
-            const response = await this.apiRequest('GET', {
-                action: 'get_tournament',
-                tournament_id: this.tournamentId
-            });
-            
-            if (response.tournament) {
-                this.currentTournament = response.tournament;
-                this.updateTournamentUI();
+    // Загрузка данных
+    loadData() {
+        this.data = JSON.parse(localStorage.getItem(this.dataKey));
+        this.settings = JSON.parse(localStorage.getItem(this.settingsKey));
+        this.userRegistration = JSON.parse(localStorage.getItem(this.userRegistrationKey));
+        
+        this.updateUI();
+    }
+
+    // Сохранение данных
+    saveData() {
+        localStorage.setItem(this.dataKey, JSON.stringify(this.data));
+    }
+
+    // Настройка DOM элементов
+    setupDOM() {
+        this.elements = {
+            tabs: document.querySelectorAll('.tab'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            teamsCount: document.getElementById('teamsCount'),
+            teamsCountDisplay: document.getElementById('teamsCountDisplay'),
+            teamsList: document.getElementById('teamsList'),
+            registrationForm: document.getElementById('registrationForm'),
+            successMessage: document.getElementById('successMessage'),
+            goToRegisterBtn: document.getElementById('goToRegisterBtn'),
+            editRegistrationBtn: document.getElementById('editRegistrationBtn'),
+            backToInfoBtn: document.getElementById('backToInfoBtn'),
+            submitBtn: document.getElementById('submitBtn'),
+            submitText: document.getElementById('submitText'),
+            userStatus: document.getElementById('userStatus'),
+            notification: document.getElementById('notification'),
+            mainPlayersContainer: document.getElementById('mainPlayers'),
+            tournamentStatus: document.getElementById('tournamentStatus'),
+            statusBadge: document.getElementById('statusBadge'),
+            startDate: document.getElementById('startDate'),
+            startDateInfo: document.getElementById('startDateInfo'),
+            regEndDate: document.getElementById('regEndDate'),
+            tournamentDescription: document.getElementById('tournamentDescription'),
+            tournamentFormat: document.getElementById('tournamentFormat'),
+            prizePool: document.getElementById('prizePool'),
+            teamSearch: document.getElementById('teamSearch'),
+            registrationIdDisplay: document.getElementById('registrationIdDisplay'),
+            successMessageText: document.getElementById('successMessageText')
+        };
+    }
+
+    // Создание полей для игроков
+    createPlayerFields() {
+        this.elements.mainPlayersContainer.innerHTML = '';
+        
+        for (let i = 1; i <= 5; i++) {
+            const playerRow = document.createElement('div');
+            playerRow.className = 'player-row';
+            playerRow.innerHTML = `
+                <div class="player-id">
+                    <label class="player-label">Игровое ID игрока ${i} *</label>
+                    <input type="text" class="input-field main-id" required 
+                           placeholder="ID игрока ${i}" maxlength="20" data-index="${i}">
+                    <div class="error-text" id="playerIdError${i}"></div>
+                </div>
+                <div class="player-nickname">
+                    <label class="player-label">Никнейм игрока ${i} *</label>
+                    <input type="text" class="input-field main-nickname" required 
+                           placeholder="Никнейм игрока ${i}" maxlength="20" data-index="${i}">
+                    <div class="error-text" id="playerNickError${i}"></div>
+                </div>
+            `;
+            this.elements.mainPlayersContainer.appendChild(playerRow);
+        }
+    }
+
+    // Обновление интерфейса
+    updateUI() {
+        // Обновление счетчика команд
+        const confirmedTeams = this.data.teams.filter(team => team.status === 'confirmed');
+        this.elements.teamsCount.textContent = confirmedTeams.length;
+        this.elements.teamsCountDisplay.textContent = this.data.teams.length;
+        
+        // Обновление информации о турнире
+        this.elements.tournamentStatus.textContent = this.getStatusText(this.data.tournament.status);
+        this.elements.startDate.textContent = this.data.tournament.startDate;
+        this.elements.startDateInfo.textContent = this.data.tournament.startDate;
+        this.elements.regEndDate.textContent = this.data.tournament.regEndDate;
+        this.elements.tournamentDescription.textContent = this.data.tournament.description;
+        this.elements.tournamentFormat.textContent = this.data.tournament.format;
+        this.elements.prizePool.textContent = this.data.tournament.prizePool;
+        
+        // Обновление статуса турнира
+        this.updateTournamentStatus();
+        
+        // Обновление статуса пользователя
+        this.updateUserStatus();
+        
+        // Обновление списка команд
+        this.renderTeamsList();
+    }
+
+    // Обновление статуса турнира
+    updateTournamentStatus() {
+        const status = this.data.tournament.status;
+        this.elements.statusBadge.textContent = this.getStatusBadgeText(status);
+        this.elements.statusBadge.className = 'status-badge ' + status;
+        
+        // Если регистрация закрыта, скрываем кнопку регистрации
+        if (status === 'closed' || !this.data.settings.registrationOpen) {
+            this.elements.goToRegisterBtn.style.display = 'none';
+        }
+    }
+
+    // Обновление статуса пользователя
+    updateUserStatus() {
+        if (this.userRegistration) {
+            const team = this.data.teams.find(t => t.id === this.userRegistration.teamId);
+            if (team) {
+                let statusText = `Ваша команда "${team.name}" зарегистрирована. `;
+                let statusClass = '';
                 
-                // Проверяем, зарегистрирован ли уже капитан
-                await this.checkRegistrationStatus();
-            } else {
-                this.showError('Турнир не найден');
+                switch(team.status) {
+                    case 'pending':
+                        statusText += 'Статус: <span class="status-badge pending">Ожидает подтверждения</span>';
+                        statusClass = 'warning';
+                        break;
+                    case 'confirmed':
+                        statusText += 'Статус: <span class="status-badge confirmed">Подтверждена</span>';
+                        statusClass = 'success';
+                        break;
+                    case 'rejected':
+                        statusText += 'Статус: <span class="status-badge rejected">Отклонена</span>';
+                        statusClass = 'danger';
+                        break;
+                }
+                
+                this.elements.userStatus.innerHTML = statusText;
+                this.elements.userStatus.style.color = `var(--${statusClass})`;
+                this.elements.goToRegisterBtn.style.display = 'none';
+                this.elements.editRegistrationBtn.style.display = 'block';
+                
+                // Заполняем форму данными пользователя
+                this.fillFormWithUserData();
             }
-        } catch (error) {
-            console.error('Ошибка загрузки информации:', error);
-            this.showError('Не удалось загрузить информацию о турнире');
+        } else {
+            this.elements.userStatus.textContent = "Вы еще не зарегистрированы на турнир";
+            this.elements.userStatus.style.color = "var(--warning)";
+            this.elements.goToRegisterBtn.style.display = "block";
+            this.elements.editRegistrationBtn.style.display = "none";
         }
     }
 
-    updateTournamentUI() {
-        const tournamentInfo = document.getElementById('tournamentInfo');
-        const tournament = this.currentTournament;
+    // Заполнение формы данными пользователя
+    fillFormWithUserData() {
+        if (!this.userRegistration || !this.elements.registrationForm) return;
         
-        let statusEmoji = '🟡';
-        let statusText = 'В скором времени';
-        let statusClass = 'planned';
+        const team = this.data.teams.find(t => t.id === this.userRegistration.teamId);
+        if (!team) return;
         
-        if (tournament.status === 'registration_open') {
-            statusEmoji = '🟢';
-            statusText = 'Регистрация открыта';
-            statusClass = 'open';
-        } else if (tournament.status === 'registration_closed') {
-            statusEmoji = '🔴';
-            statusText = 'Регистрация закрыта';
-            statusClass = 'closed';
-        }
+        document.getElementById('registrationId').value = team.id;
+        document.getElementById('teamName').value = team.name;
+        document.getElementById('teamTag').value = team.tag;
+        document.getElementById('telegram').value = team.contacts.telegram || '';
+        document.getElementById('vk').value = team.contacts.vk || '';
+        document.getElementById('email').value = team.contacts.email || '';
         
-        tournamentInfo.innerHTML = `
-            <div class="tournament-header">
-                <h3><i class="fas fa-trophy"></i> ${tournament.name}</h3>
-                <span class="status-badge ${statusClass}">${statusEmoji} ${statusText}</span>
-            </div>
-            <div class="tournament-details">
-                <p><i class="far fa-calendar-alt"></i> Начало: <strong>${tournament.start_date}</strong></p>
-                <p><i class="fas fa-users"></i> Команд: <strong>${tournament.registered_teams}/${tournament.max_teams}</strong></p>
-                <p><i class="fas fa-crown"></i> Капитан ID: <strong>${this.captainId}</strong></p>
-            </div>
-        `;
-        
-        // Если регистрация закрыта, скрываем форму
-        if (tournament.status !== 'registration_open') {
-            this.showRegistrationClosed();
-        }
-    }
-
-    async checkRegistrationStatus() {
-        try {
-            const response = await this.apiRequest('GET', {
-                action: 'check_registration',
-                captain_id: this.captainId,
-                tournament_id: this.tournamentId
-            });
+        // Заполняем основных игроков
+        team.players.forEach((player, index) => {
+            const inputs = document.querySelectorAll(`.main-id[data-index="${index + 1}"]`);
+            const nicknameInputs = document.querySelectorAll(`.main-nickname[data-index="${index + 1}"]`);
             
-            if (response.registered) {
-                this.isRegistered = true;
-                this.showAlreadyRegistered(response.team_name);
-            }
-        } catch (error) {
-            console.error('Ошибка проверки регистрации:', error);
+            if (inputs[0]) inputs[0].value = player.id;
+            if (nicknameInputs[0]) nicknameInputs[0].value = player.nickname;
+        });
+        
+        // Заполняем запасного игрока
+        if (team.reservePlayer) {
+            document.querySelector('.reserve-id').value = team.reservePlayer.id;
+            document.querySelector('.reserve-nickname').value = team.reservePlayer.nickname;
         }
     }
 
-    showAlreadyRegistered(teamName) {
-        const statusMessage = document.getElementById('statusMessage');
-        const form = document.getElementById('registrationForm');
+    // Отрисовка списка команд
+    renderTeamsList(filter = 'all', searchQuery = '') {
+        this.elements.teamsList.innerHTML = '';
         
-        statusMessage.innerHTML = `
-            <div class="status-message registered">
-                <div class="status-icon">
-                    <i class="fas fa-check-circle"></i>
+        let teamsToShow = this.data.teams;
+        
+        // Применяем фильтр
+        if (filter !== 'all') {
+            teamsToShow = teamsToShow.filter(team => team.status === filter);
+        }
+        
+        // Применяем поиск
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            teamsToShow = teamsToShow.filter(team => 
+                team.name.toLowerCase().includes(query) || 
+                team.tag.toLowerCase().includes(query)
+            );
+        }
+        
+        if (teamsToShow.length === 0) {
+            this.elements.teamsList.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <i class="fas fa-users" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i>
+                    <p>${searchQuery ? 'Команды не найдены' : 'Пока ни одна команда не зарегистрирована'}</p>
                 </div>
-                <h3>Регистрация уже выполнена!</h3>
-                <p>Вы уже зарегистрировали команду <strong>"${teamName}"</strong> на этот турнир.</p>
-                <p>Ожидайте начала турнира и следите за обновлениями.</p>
-                <button onclick="window.close()" class="btn-primary">
-                    <i class="fas fa-times"></i> Закрыть
-                </button>
-            </div>
-        `;
-        
-        form.style.display = 'none';
-        statusMessage.style.display = 'block';
-    }
-
-    showRegistrationClosed() {
-        const statusMessage = document.getElementById('statusMessage');
-        const form = document.getElementById('registrationForm');
-        
-        statusMessage.innerHTML = `
-            <div class="status-message closed">
-                <div class="status-icon">
-                    <i class="fas fa-lock"></i>
-                </div>
-                <h3>Регистрация закрыта!</h3>
-                <p>Регистрация на турнир <strong>"${this.currentTournament.name}"</strong> временно закрыта.</p>
-                <p>Следите за новыми турнирами в нашем боте.</p>
-                <button onclick="window.close()" class="btn-primary">
-                    <i class="fas fa-times"></i> Закрыть
-                </button>
-            </div>
-        `;
-        
-        form.style.display = 'none';
-        statusMessage.style.display = 'block';
-    }
-
-    showError(message) {
-        const statusMessage = document.getElementById('statusMessage');
-        statusMessage.innerHTML = `
-            <div class="status-message error">
-                <div class="status-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <h3>Ошибка!</h3>
-                <p>${message}</p>
-                <button onclick="window.location.reload()" class="btn-secondary">
-                    <i class="fas fa-redo"></i> Обновить
-                </button>
-            </div>
-        `;
-        statusMessage.style.display = 'block';
-        
-        // Скрываем форму
-        document.getElementById('registrationForm').style.display = 'none';
-    }
-
-    showSuccess() {
-        const form = document.getElementById('registrationForm');
-        const successMessage = document.getElementById('successMessage');
-        
-        form.style.display = 'none';
-        successMessage.style.display = 'block';
-        
-        // Отправляем данные обратно в Telegram бота
-        this.sendToTelegramBot();
-    }
-
-    setCaptainId() {
-        document.getElementById('captainId').value = this.captainId;
-        document.getElementById('captainIdDisplay').textContent = this.captainId;
-    }
-
-    setupEventListeners() {
-        // Основные кнопки
-        document.getElementById('submitBtn').addEventListener('click', () => this.submitForm());
-        document.getElementById('clearBtn').addEventListener('click', () => this.clearForm());
-        document.getElementById('closeBtn').addEventListener('click', () => this.closeWebApp());
-        
-        // Валидация в реальном времени
-        document.getElementById('contactInfo').addEventListener('input', (e) => {
-            this.validateContactInfo(e.target);
-        });
-        
-        document.getElementById('teamTag').addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-        });
-        
-        // Автозаполнение никнейма капитана
-        document.getElementById('captainNickname').addEventListener('focus', () => {
-            if (!document.getElementById('captainNickname').value) {
-                document.getElementById('captainNickname').value = `Капитан_${this.captainId.slice(-4)}`;
-            }
-        });
-        
-        // Копирование ID капитана
-        document.getElementById('copyCaptainId').addEventListener('click', () => {
-            navigator.clipboard.writeText(this.captainId);
-            this.showToast('ID скопирован в буфер обмена');
-        });
-    }
-
-    validateContactInfo(input) {
-        const value = input.value.trim();
-        
-        // Разрешенные форматы:
-        // Telegram: @username или t.me/username
-        // VK: vk.com/id123 или vk.com/username
-        const tgRegex = /^(@[a-zA-Z0-9_]{5,32}|(https?:\/\/)?(t\.me|telegram\.me)\/[a-zA-Z0-9_]{5,32})$/i;
-        const vkRegex = /^(https?:\/\/)?(www\.)?(vk\.com\/[a-zA-Z0-9_.]+|m\.vk\.com\/[a-zA-Z0-9_.]+)$/i;
-        
-        if (!value) {
-            input.setCustomValidity('');
+            `;
             return;
         }
         
-        if (!tgRegex.test(value) && !vkRegex.test(value)) {
-            input.setCustomValidity('Формат: @username_telegram или vk.com/your_profile');
-            input.classList.add('error');
-        } else {
-            input.setCustomValidity('');
-            input.classList.remove('error');
+        teamsToShow.forEach(team => {
+            const teamCard = document.createElement('div');
+            teamCard.className = 'team-card';
+            
+            let contactsHTML = '';
+            if (team.contacts.telegram) {
+                contactsHTML += `<div><i class="fab fa-telegram contact-icon"></i> ${team.contacts.telegram}</div>`;
+            }
+            if (team.contacts.vk) {
+                contactsHTML += `<div><i class="fab fa-vk contact-icon"></i> ${team.contacts.vk}</div>`;
+            }
+            if (team.contacts.email) {
+                contactsHTML += `<div><i class="fas fa-envelope contact-icon"></i> ${team.contacts.email}</div>`;
+            }
+            
+            teamCard.innerHTML = `
+                <div class="team-name">
+                    ${team.name}
+                    <span class="team-status ${team.status}">${this.getStatusText(team.status)}</span>
+                </div>
+                <div class="team-tag">${team.tag}</div>
+                <div class="team-contacts">${contactsHTML}</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+                    Зарегистрирована: ${team.registrationDate}
+                </div>
+            `;
+            
+            this.elements.teamsList.appendChild(teamCard);
+        });
+    }
+
+    // Настройка обработчиков событий
+    setupEventListeners() {
+        // Обработчики для вкладок
+        this.elements.tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabId = tab.getAttribute('data-tab');
+                this.switchTab(tabId);
+            });
+        });
+
+        // Кнопка перехода к регистрации
+        this.elements.goToRegisterBtn.addEventListener('click', () => {
+            this.switchTab('register');
+        });
+
+        // Кнопка редактирования регистрации
+        this.elements.editRegistrationBtn.addEventListener('click', () => {
+            this.switchTab('register');
+        });
+
+        // Кнопка возврата к информации
+        this.elements.backToInfoBtn.addEventListener('click', () => {
+            this.elements.successMessage.classList.remove('active');
+            this.switchTab('info');
+        });
+
+        // Поиск команд
+        if (this.elements.teamSearch) {
+            this.elements.teamSearch.addEventListener('input', (e) => {
+                const searchQuery = e.target.value;
+                const activeFilter = document.querySelector('.filter-btn.active')?.dataset.filter || 'all';
+                this.renderTeamsList(activeFilter, searchQuery);
+            });
+        }
+
+        // Фильтры команд
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                const filter = e.target.dataset.filter;
+                const searchQuery = this.elements.teamSearch?.value || '';
+                this.renderTeamsList(filter, searchQuery);
+            });
+        });
+
+        // Обработка отправки формы
+        this.elements.registrationForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleFormSubmit();
+        });
+    }
+
+    // Переключение вкладок
+    switchTab(tabId) {
+        this.elements.tabs.forEach(t => t.classList.remove('active'));
+        this.elements.tabContents.forEach(content => content.classList.remove('active'));
+        
+        document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
+        document.getElementById(`${tabId}-tab`).classList.add('active');
+    }
+
+    // Обработка отправки формы
+    async handleFormSubmit() {
+        if (!this.validateForm()) {
+            this.showNotification("Заполните все обязательные поля правильно", "error");
+            return;
+        }
+        
+        // Проверяем, открыта ли регистрация
+        if (this.data.tournament.status === 'closed' || !this.data.settings.registrationOpen) {
+            this.showNotification("Регистрация на турнир закрыта", "error");
+            return;
+        }
+        
+        // Проверяем максимальное количество команд
+        if (this.data.teams.length >= this.data.settings.maxTeams) {
+            this.showNotification("Достигнуто максимальное количество команд", "error");
+            return;
+        }
+        
+        const formData = this.collectFormData();
+        const isEditMode = !!document.getElementById('registrationId').value;
+        
+        // Показываем индикатор загрузки
+        this.elements.submitBtn.disabled = true;
+        this.elements.submitText.innerHTML = '<div class="loading"></div> Отправка...';
+        
+        // Имитация задержки сети
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        try {
+            if (isEditMode) {
+                // Редактирование существующей заявки
+                await this.updateRegistration(formData);
+            } else {
+                // Новая регистрация
+                await this.createRegistration(formData);
+            }
+            
+            // Обновляем данные
+            this.loadData();
+            
+            // Показываем сообщение об успехе
+            this.showSuccessMessage(isEditMode);
+            
+        } catch (error) {
+            this.showNotification("Ошибка при отправке данных: " + error.message, "error");
+            this.elements.submitBtn.disabled = false;
+            this.elements.submitText.textContent = isEditMode ? 'Обновить заявку' : 'Отправить заявку';
         }
     }
 
+    // Создание новой регистрации
+    async createRegistration(formData) {
+        // Генерируем ID
+        this.data.lastId++;
+        const teamId = this.data.lastId;
+        
+        const teamData = {
+            id: teamId,
+            ...formData,
+            status: this.data.settings.requireApproval ? 'pending' : 'confirmed',
+            registrationDate: new Date().toLocaleDateString('ru-RU'),
+            registrationTime: new Date().toISOString()
+        };
+        
+        // Добавляем команду
+        this.data.teams.push(teamData);
+        this.saveData();
+        
+        // Сохраняем информацию о регистрации пользователя
+        const userRegistration = {
+            teamId: teamId,
+            registrationDate: new Date().toISOString(),
+            ip: this.getUserIP() // В реальном приложении нужно получать с сервера
+        };
+        localStorage.setItem(this.userRegistrationKey, JSON.stringify(userRegistration));
+        
+        // Отправка в Google Sheets (если настроено)
+        await this.sendToGoogleSheets(teamData);
+        
+        this.showNotification("Команда успешно зарегистрирована!", "success");
+    }
+
+    // Обновление регистрации
+    async updateRegistration(formData) {
+        const teamId = parseInt(document.getElementById('registrationId').value);
+        const teamIndex = this.data.teams.findIndex(t => t.id === teamId);
+        
+        if (teamIndex === -1) {
+            throw new Error("Команда не найдена");
+        }
+        
+        // Обновляем данные команды
+        this.data.teams[teamIndex] = {
+            ...this.data.teams[teamIndex],
+            ...formData,
+            status: 'pending' // Сбрасываем статус при редактировании
+        };
+        
+        this.saveData();
+        this.showNotification("Данные команды обновлены", "success");
+    }
+
+    // Валидация формы
     validateForm() {
         let isValid = true;
         
-        // Проверка обязательных полей
-        const requiredFields = [
-            'teamName',
-            'teamTag',
-            'captainNickname',
-            'player2Id', 'player2Nickname',
-            'player3Id', 'player3Nickname',
-            'player4Id', 'player4Nickname',
-            'contactInfo'
-        ];
-        
-        requiredFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (!field.value.trim()) {
-                field.classList.add('error');
-                isValid = false;
-            } else {
-                field.classList.remove('error');
-            }
+        // Очищаем предыдущие ошибки
+        document.querySelectorAll('.error-text').forEach(el => {
+            el.style.display = 'none';
+            el.textContent = '';
+        });
+        document.querySelectorAll('.input-field').forEach(el => {
+            el.classList.remove('error');
         });
         
-        if (!isValid) {
-            this.showToast('Заполните все обязательные поля!');
-            return false;
-        }
-        
-        // Проверка уникальности ID игроков
-        const playerIds = [
-            this.captainId,
-            document.getElementById('player2Id').value,
-            document.getElementById('player3Id').value,
-            document.getElementById('player4Id').value,
-            document.getElementById('player5Id').value,
-            document.getElementById('player6Id').value
-        ].filter(id => id);
-        
-        const uniqueIds = new Set(playerIds);
-        if (uniqueIds.size !== playerIds.length) {
-            this.showToast('ID игроков должны быть уникальными!');
-            return false;
-        }
-        
-        // Проверка формата ID (только цифры для Telegram ID)
-        const telegramIdFields = ['player2Id', 'player3Id', 'player4Id', 'player5Id', 'player6Id'];
-        for (const fieldId of telegramIdFields) {
-            const field = document.getElementById(fieldId);
-            if (field.value && !/^\d+$/.test(field.value)) {
-                field.classList.add('error');
-                this.showToast('Telegram ID должны содержать только цифры!');
-                return false;
-            }
-        }
-        
-        // Проверка длины названия команды
-        const teamName = document.getElementById('teamName').value;
-        if (teamName.length > 32) {
-            document.getElementById('teamName').classList.add('error');
-            this.showToast('Название команды не более 32 символов!');
-            return false;
+        // Проверка названия команды
+        const teamName = document.getElementById('teamName').value.trim();
+        if (!teamName || teamName.length < 3) {
+            this.showError('teamName', 'Название команды должно быть не менее 3 символов');
+            isValid = false;
         }
         
         // Проверка тега команды
-        const teamTag = document.getElementById('teamTag').value;
-        if (teamTag.length > 6) {
-            document.getElementById('teamTag').classList.add('error');
-            this.showToast('Тег команды не более 6 символов!');
-            return false;
+        const teamTag = document.getElementById('teamTag').value.trim().toUpperCase();
+        if (!teamTag || teamTag.length < 2 || teamTag.length > 6) {
+            this.showError('teamTag', 'Тег команды должен быть от 2 до 6 символов');
+            isValid = false;
         }
         
-        return true;
+        // Проверка уникальности тега
+        const teamId = document.getElementById('registrationId').value;
+        const existingTeam = this.data.teams.find(t => 
+            t.tag.toUpperCase() === teamTag && t.id.toString() !== teamId
+        );
+        if (existingTeam) {
+            this.showError('teamTag', 'Команда с таким тегом уже зарегистрирована');
+            isValid = false;
+        }
+        
+        // Проверка основных игроков
+        for (let i = 1; i <= 5; i++) {
+            const playerId = document.querySelector(`.main-id[data-index="${i}"]`).value.trim();
+            const playerNick = document.querySelector(`.main-nickname[data-index="${i}"]`).value.trim();
+            
+            if (!playerId) {
+                this.showError(`playerIdError${i}`, 'Введите игровое ID');
+                document.querySelector(`.main-id[data-index="${i}"]`).classList.add('error');
+                isValid = false;
+            }
+            
+            if (!playerNick) {
+                this.showError(`playerNickError${i}`, 'Введите никнейм');
+                document.querySelector(`.main-nickname[data-index="${i}"]`).classList.add('error');
+                isValid = false;
+            }
+        }
+        
+        // Проверка запасного игрока
+        const reserveId = document.querySelector('.reserve-id').value.trim();
+        const reserveNick = document.querySelector('.reserve-nickname').value.trim();
+        
+        if (!reserveId) {
+            this.showError('reserve-id', 'Введите ID запасного игрока', '.reserve-id');
+            isValid = false;
+        }
+        
+        if (!reserveNick) {
+            this.showError('reserve-nickname', 'Введите никнейм запасного игрока', '.reserve-nickname');
+            isValid = false;
+        }
+        
+        // Проверка контактов
+        const telegram = document.getElementById('telegram').value.trim();
+        const vk = document.getElementById('vk').value.trim();
+        
+        if (!telegram && !vk) {
+            this.showError('telegram', 'Укажите хотя бы один способ связи (Telegram или ВКонтакте)');
+            this.showError('vk', 'Укажите хотя бы один способ связи (Telegram или ВКонтакте)');
+            isValid = false;
+        }
+        
+        return isValid;
     }
 
+    // Показать ошибку
+    showError(fieldId, message, selector = null) {
+        const element = selector ? 
+            document.querySelector(selector) : 
+            document.getElementById(fieldId);
+        
+        if (element) {
+            element.classList.add('error');
+            const errorElement = element.nextElementSibling?.classList?.contains('error-text') ? 
+                element.nextElementSibling : 
+                document.getElementById(`${fieldId}Error`) || 
+                document.querySelector(`[data-error="${fieldId}"]`);
+            
+            if (errorElement && errorElement.classList.contains('error-text')) {
+                errorElement.textContent = message;
+                errorElement.style.display = 'block';
+            }
+        }
+    }
+
+    // Сбор данных формы
     collectFormData() {
-        const data = {
-            tournament_id: this.tournamentId,
-            captain_id: this.captainId,
-            team_name: document.getElementById('teamName').value.trim(),
-            team_tag: document.getElementById('teamTag').value.trim(),
-            contact_info: document.getElementById('contactInfo').value.trim(),
-            additional_info: document.getElementById('additionalInfo').value.trim(),
-            players: [
-                {
-                    id: this.captainId,
-                    nickname: document.getElementById('captainNickname').value.trim()
-                },
-                {
-                    id: document.getElementById('player2Id').value,
-                    nickname: document.getElementById('player2Nickname').value.trim()
-                },
-                {
-                    id: document.getElementById('player3Id').value,
-                    nickname: document.getElementById('player3Nickname').value.trim()
-                },
-                {
-                    id: document.getElementById('player4Id').value,
-                    nickname: document.getElementById('player4Nickname').value.trim()
-                }
-            ],
-            optional_players: []
+        const teamName = document.getElementById('teamName').value.trim();
+        const teamTag = document.getElementById('teamTag').value.trim().toUpperCase();
+        const telegram = document.getElementById('telegram').value.trim();
+        const vk = document.getElementById('vk').value.trim();
+        const email = document.getElementById('email').value.trim();
+        
+        // Собираем данных об основных игроках
+        const players = [];
+        for (let i = 1; i <= 5; i++) {
+            const idInput = document.querySelector(`.main-id[data-index="${i}"]`);
+            const nickInput = document.querySelector(`.main-nickname[data-index="${i}"]`);
+            
+            if (idInput && nickInput) {
+                players.push({
+                    id: idInput.value.trim(),
+                    nickname: nickInput.value.trim(),
+                    position: i
+                });
+            }
+        }
+        
+        // Данные о запасном игроке
+        const reservePlayer = {
+            id: document.querySelector('.reserve-id').value.trim(),
+            nickname: document.querySelector('.reserve-nickname').value.trim()
         };
         
-        // Добавляем опциональных игроков, если они заполнены
-        const player5Id = document.getElementById('player5Id').value;
-        const player5Nickname = document.getElementById('player5Nickname').value.trim();
-        if (player5Id && player5Nickname) {
-            data.optional_players.push({
-                id: player5Id,
-                nickname: player5Nickname
-            });
-        }
-        
-        const player6Id = document.getElementById('player6Id').value;
-        const player6Nickname = document.getElementById('player6Nickname').value.trim();
-        if (player6Id && player6Nickname) {
-            data.optional_players.push({
-                id: player6Id,
-                nickname: player6Nickname
-            });
-        }
-        
-        return data;
-    }
-
-    async submitForm() {
-        if (this.isRegistered) {
-            this.showToast('Вы уже зарегистрированы на этот турнир!');
-            return;
-        }
-        
-        if (!this.validateForm()) {
-            return;
-        }
-        
-        const submitBtn = document.getElementById('submitBtn');
-        const originalText = submitBtn.innerHTML;
-        
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Регистрация...';
-        submitBtn.disabled = true;
-        
-        try {
-            const formData = this.collectFormData();
-            
-            const response = await this.apiRequest('POST', {
-                action: 'register_team',
-                data: formData
-            });
-            
-            if (response.success) {
-                this.isRegistered = true;
-                this.showSuccess();
-            } else {
-                throw new Error(response.error || 'Ошибка регистрации');
-            }
-        } catch (error) {
-            console.error('Ошибка регистрации:', error);
-            this.showToast(error.message || 'Ошибка регистрации. Попробуйте еще раз.');
-        } finally {
-            submitBtn.innerHTML = originalText;
-            submitBtn.disabled = false;
-        }
-    }
-
-    async apiRequest(method, params) {
-        const url = new URL(this.API_BASE_URL);
-        
-        if (method === 'GET') {
-            Object.keys(params).forEach(key => {
-                url.searchParams.append(key, params[key]);
-            });
-        }
-        
-        const options = {
-            method: method,
-            headers: {
-                'Content-Type': 'application/json'
+        return {
+            name: teamName,
+            tag: teamTag,
+            players: players,
+            reservePlayer: reservePlayer,
+            contacts: {
+                telegram,
+                vk,
+                email
             }
         };
+    }
+
+    // Показать сообщение об успехе
+    showSuccessMessage(isEditMode = false) {
+        const teamId = document.getElementById('registrationId').value || this.data.lastId;
         
-        if (method === 'POST') {
-            options.body = JSON.stringify(params);
+        this.elements.registrationIdDisplay.textContent = `ASTRA-${teamId.toString().padStart(4, '0')}`;
+        
+        if (isEditMode) {
+            this.elements.successMessageText.textContent = "Данные вашей команды успешно обновлены. Организаторы проверят изменения и свяжутся с вами.";
+            this.elements.successTitle.textContent = "Данные обновлены!";
         }
         
+        this.elements.registrationForm.reset();
+        this.elements.successMessage.classList.add('active');
+        this.elements.registerTab.classList.remove('active');
+        
+        // Сбрасываем кнопку отправки
+        this.elements.submitBtn.disabled = false;
+        this.elements.submitText.textContent = isEditMode ? 'Обновить заявку' : 'Отправить заявку';
+        
+        // Сбрасываем скрытое поле ID
+        document.getElementById('registrationId').value = '';
+    }
+
+    // Отправка данных в Google Sheets
+    async sendToGoogleSheets(teamData) {
+        const sheetsUrl = this.settings.googleSheetsUrl;
+        if (!sheetsUrl) return;
+        
         try {
-            const response = await fetch(url, options);
+            const response = await fetch(sheetsUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(teamData)
+            });
+            
             if (!response.ok) {
-                throw new Error(`HTTP error: ${response.status}`);
+                throw new Error('Ошибка отправки в Google Sheets');
             }
-            return await response.json();
+            
+            console.log('Данные отправлены в Google Sheets');
         } catch (error) {
-            console.error('API Request error:', error);
-            throw error;
+            console.error('Ошибка при отправке в Google Sheets:', error);
         }
     }
 
-    sendToTelegramBot() {
-        // Отправляем данные обратно в Telegram WebApp
-        if (window.Telegram && Telegram.WebApp) {
-            const formData = this.collectFormData();
-            
-            Telegram.WebApp.sendData(JSON.stringify({
-                action: 'team_registered',
-                tournament_id: this.tournamentId,
-                team_name: formData.team_name,
-                team_tag: formData.team_tag,
-                players_count: formData.players.length + formData.optional_players.length
-            }));
-            
-            // Закрываем WebApp через 3 секунды
-            setTimeout(() => {
-                Telegram.WebApp.close();
-            }, 3000);
-        }
-    }
-
-    clearForm() {
-        if (confirm('Очистить все поля формы?')) {
-            const form = document.getElementById('registrationForm');
-            form.reset();
-            
-            // Восстанавливаем ID капитана
-            document.getElementById('captainId').value = this.captainId;
-            document.getElementById('captainIdDisplay').textContent = this.captainId;
-            
-            // Убираем классы ошибок
-            const inputs = form.querySelectorAll('input, textarea');
-            inputs.forEach(input => {
-                input.classList.remove('error');
-            });
-            
-            this.showToast('Форма очищена');
-        }
-    }
-
-    closeWebApp() {
-        if (window.Telegram && Telegram.WebApp) {
-            Telegram.WebApp.close();
-        } else {
-            window.close();
-        }
-    }
-
-    showToast(message) {
-        // Создаем или находим контейнер для тостов
-        let toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 1000;
-            `;
-            document.body.appendChild(toastContainer);
-        }
+    // Показать уведомление
+    showNotification(message, type = "success") {
+        this.elements.notification.textContent = message;
+        this.elements.notification.className = `notification ${type}`;
+        this.elements.notification.style.display = 'block';
         
-        // Создаем тост
-        const toast = document.createElement('div');
-        toast.className = 'toast-message';
-        toast.textContent = message;
-        toast.style.cssText = `
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            animation: slideIn 0.3s ease;
-            max-width: 300px;
-        `;
-        
-        toastContainer.appendChild(toast);
-        
-        // Удаляем тост через 3 секунды
         setTimeout(() => {
-            toast.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => {
-                toast.remove();
-            }, 300);
-        }, 3000);
+            this.elements.notification.style.display = 'none';
+        }, 5000);
+    }
+
+    // Вспомогательные методы
+    getStatusText(status) {
+        const statusMap = {
+            'registration': 'Регистрация',
+            'ongoing': 'Идет турнир',
+            'finished': 'Завершен',
+            'pending': 'Ожидает',
+            'confirmed': 'Подтверждена',
+            'rejected': 'Отклонена',
+            'closed': 'Закрыта'
+        };
+        return statusMap[status] || status;
+    }
+
+    getStatusBadgeText(status) {
+        const badgeMap = {
+            'registration': 'ОТКРЫТА',
+            'ongoing': 'В ПРОЦЕССЕ',
+            'finished': 'ЗАВЕРШЕН',
+            'closed': 'ЗАКРЫТА'
+        };
+        return badgeMap[status] || status.toUpperCase();
+    }
+
+    getUserIP() {
+        // В реальном приложении IP должен получаться с сервера
+        return 'local-' + Math.random().toString(36).substr(2, 9);
     }
 }
 
-// Инициализация при загрузке страницы
+// Инициализация приложения при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new RegistrationApp();
-    
-    // Добавляем CSS анимации
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-        
-        .toast-message {
-            animation: slideIn 0.3s ease;
-        }
-    `;
-    document.head.appendChild(style);
-
+    window.app = new AstraTournamentApp();
 });
