@@ -1,17 +1,24 @@
-// Главный класс приложения
+// Главный класс приложения для Astra Tournament S1
 class AstraTournamentApp {
     constructor() {
         this.dataKey = 'astraTournamentData';
         this.settingsKey = 'astraTournamentSettings';
         this.userRegistrationKey = 'userRegistration';
+        this.syncKey = 'astraSyncQueue';
+        
+        // URL Google Apps Script (будет загружен из настроек)
+        this.googleScriptURL = '';
+        this.isOnline = navigator.onLine;
+        
         this.init();
     }
 
+    // Инициализация приложения
     init() {
         // Инициализация данных
         this.initializeData();
         
-        // Настройка DOM элементов
+        // Настройка DOM
         this.setupDOM();
         
         // Загрузка данных
@@ -22,6 +29,12 @@ class AstraTournamentApp {
         
         // Создание полей для игроков
         this.createPlayerFields();
+        
+        // Проверка подключения к интернету
+        this.setupOnlineCheck();
+        
+        // Запуск синхронизации
+        this.startSyncService();
     }
 
     // Инициализация данных в localStorage
@@ -42,7 +55,9 @@ class AstraTournamentApp {
                 settings: {
                     registrationOpen: true,
                     maxTeams: 32,
-                    requireApproval: true
+                    requireApproval: true,
+                    googleScriptURL: "",
+                    enableSync: true
                 }
             };
             localStorage.setItem(this.dataKey, JSON.stringify(initialData));
@@ -51,10 +66,15 @@ class AstraTournamentApp {
         if (!localStorage.getItem(this.settingsKey)) {
             const settings = {
                 adminPassword: "astra2023",
-                googleSheetsUrl: "",
-                contactEmail: "astra.org@example.com"
+                contactEmail: "astra.org@example.com",
+                sheetsPassword: "astra2023"
             };
             localStorage.setItem(this.settingsKey, JSON.stringify(settings));
+        }
+        
+        // Инициализация очереди синхронизации
+        if (!localStorage.getItem(this.syncKey)) {
+            localStorage.setItem(this.syncKey, JSON.stringify([]));
         }
     }
 
@@ -63,6 +83,10 @@ class AstraTournamentApp {
         this.data = JSON.parse(localStorage.getItem(this.dataKey));
         this.settings = JSON.parse(localStorage.getItem(this.settingsKey));
         this.userRegistration = JSON.parse(localStorage.getItem(this.userRegistrationKey));
+        this.syncQueue = JSON.parse(localStorage.getItem(this.syncKey));
+        
+        // Загружаем URL Google Script из настроек
+        this.googleScriptURL = this.data.settings.googleScriptURL || '';
         
         this.updateUI();
     }
@@ -70,11 +94,18 @@ class AstraTournamentApp {
     // Сохранение данных
     saveData() {
         localStorage.setItem(this.dataKey, JSON.stringify(this.data));
+        localStorage.setItem(this.settingsKey, JSON.stringify(this.settings));
+    }
+
+    // Сохранение очереди синхронизации
+    saveSyncQueue() {
+        localStorage.setItem(this.syncKey, JSON.stringify(this.syncQueue));
     }
 
     // Настройка DOM элементов
     setupDOM() {
         this.elements = {
+            // Основные элементы
             tabs: document.querySelectorAll('.tab'),
             tabContents: document.querySelectorAll('.tab-content'),
             teamsCount: document.getElementById('teamsCount'),
@@ -90,6 +121,8 @@ class AstraTournamentApp {
             userStatus: document.getElementById('userStatus'),
             notification: document.getElementById('notification'),
             mainPlayersContainer: document.getElementById('mainPlayers'),
+            
+            // Статус турнира
             tournamentStatus: document.getElementById('tournamentStatus'),
             statusBadge: document.getElementById('statusBadge'),
             startDate: document.getElementById('startDate'),
@@ -98,9 +131,25 @@ class AstraTournamentApp {
             tournamentDescription: document.getElementById('tournamentDescription'),
             tournamentFormat: document.getElementById('tournamentFormat'),
             prizePool: document.getElementById('prizePool'),
+            
+            // Поиск и фильтры
             teamSearch: document.getElementById('teamSearch'),
             registrationIdDisplay: document.getElementById('registrationIdDisplay'),
-            successMessageText: document.getElementById('successMessageText')
+            successMessageText: document.getElementById('successMessageText'),
+            
+            // Форма регистрации
+            registrationId: document.getElementById('registrationId'),
+            teamName: document.getElementById('teamName'),
+            teamTag: document.getElementById('teamTag'),
+            telegram: document.getElementById('telegram'),
+            vk: document.getElementById('vk'),
+            email: document.getElementById('email'),
+            
+            // Синхронизация
+            syncStatusCard: document.getElementById('syncStatusCard'),
+            sheetsSyncIcon: document.getElementById('sheetsSyncIcon'),
+            sheetsStatus: document.getElementById('sheetsStatus'),
+            syncInfo: document.getElementById('syncInfo')
         };
     }
 
@@ -153,6 +202,9 @@ class AstraTournamentApp {
         
         // Обновление списка команд
         this.renderTeamsList();
+        
+        // Обновление статуса синхронизации
+        this.updateSyncStatus();
     }
 
     // Обновление статуса турнира
@@ -213,12 +265,12 @@ class AstraTournamentApp {
         const team = this.data.teams.find(t => t.id === this.userRegistration.teamId);
         if (!team) return;
         
-        document.getElementById('registrationId').value = team.id;
-        document.getElementById('teamName').value = team.name;
-        document.getElementById('teamTag').value = team.tag;
-        document.getElementById('telegram').value = team.contacts.telegram || '';
-        document.getElementById('vk').value = team.contacts.vk || '';
-        document.getElementById('email').value = team.contacts.email || '';
+        this.elements.registrationId.value = team.id;
+        this.elements.teamName.value = team.name;
+        this.elements.teamTag.value = team.tag;
+        this.elements.telegram.value = team.contacts.telegram || '';
+        this.elements.vk.value = team.contacts.vk || '';
+        this.elements.email.value = team.contacts.email || '';
         
         // Заполняем основных игроков
         team.players.forEach((player, index) => {
@@ -290,6 +342,9 @@ class AstraTournamentApp {
                 <div class="team-contacts">${contactsHTML}</div>
                 <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
                     Зарегистрирована: ${team.registrationDate}
+                    ${team.syncedWithSheets ? ' • <i class="fas fa-cloud" style="color: var(--success);"></i>' : 
+                      team.syncFailed ? ' • <i class="fas fa-cloud" style="color: var(--danger);"></i>' : 
+                      ' • <i class="fas fa-desktop" style="color: var(--warning);"></i>'}
                 </div>
             `;
             
@@ -348,6 +403,44 @@ class AstraTournamentApp {
             e.preventDefault();
             this.handleFormSubmit();
         });
+        
+        // Обработка изменения полей формы для валидации
+        this.setupFormValidation();
+    }
+
+    // Настройка валидации формы
+    setupFormValidation() {
+        const validateField = (field, validator) => {
+            field.addEventListener('blur', () => {
+                validator(field);
+            });
+            field.addEventListener('input', () => {
+                this.clearError(field);
+            });
+        };
+        
+        // Валидация названия команды
+        validateField(this.elements.teamName, (field) => {
+            if (field.value.trim().length < 3) {
+                this.showError(field, 'Название должно быть не менее 3 символов');
+            }
+        });
+        
+        // Валидация тега команды
+        validateField(this.elements.teamTag, (field) => {
+            const tag = field.value.trim().toUpperCase();
+            if (tag.length < 2 || tag.length > 6) {
+                this.showError(field, 'Тег должен быть от 2 до 6 символов');
+            }
+        });
+        
+        // Валидация Telegram
+        validateField(this.elements.telegram, (field) => {
+            const value = field.value.trim();
+            if (value && !value.startsWith('@') && !value.startsWith('https://t.me/')) {
+                this.showError(field, 'Введите @username или https://t.me/username');
+            }
+        });
     }
 
     // Переключение вкладок
@@ -379,14 +472,11 @@ class AstraTournamentApp {
         }
         
         const formData = this.collectFormData();
-        const isEditMode = !!document.getElementById('registrationId').value;
+        const isEditMode = !!this.elements.registrationId.value;
         
         // Показываем индикатор загрузки
         this.elements.submitBtn.disabled = true;
         this.elements.submitText.innerHTML = '<div class="loading"></div> Отправка...';
-        
-        // Имитация задержки сети
-        await new Promise(resolve => setTimeout(resolve, 1500));
         
         try {
             if (isEditMode) {
@@ -421,10 +511,14 @@ class AstraTournamentApp {
             ...formData,
             status: this.data.settings.requireApproval ? 'pending' : 'confirmed',
             registrationDate: new Date().toLocaleDateString('ru-RU'),
-            registrationTime: new Date().toISOString()
+            registrationTime: new Date().toISOString(),
+            ip: await this.getUserIP(),
+            syncedWithSheets: false,
+            syncFailed: false,
+            syncAttempts: 0
         };
         
-        // Добавляем команду
+        // Добавляем команду в локальное хранилище
         this.data.teams.push(teamData);
         this.saveData();
         
@@ -432,33 +526,80 @@ class AstraTournamentApp {
         const userRegistration = {
             teamId: teamId,
             registrationDate: new Date().toISOString(),
-            ip: this.getUserIP() // В реальном приложении нужно получать с сервера
+            localData: true
         };
         localStorage.setItem(this.userRegistrationKey, JSON.stringify(userRegistration));
         
-        // Отправка в Google Sheets (если настроено)
-        await this.sendToGoogleSheets(teamData);
+        // Пытаемся отправить в Google Sheets
+        if (this.googleScriptURL && this.data.settings.enableSync) {
+            try {
+                await this.sendToGoogleSheets(teamData, 'register');
+                teamData.syncedWithSheets = true;
+                
+                // Обновляем данные
+                const teamIndex = this.data.teams.findIndex(t => t.id === teamId);
+                if (teamIndex !== -1) {
+                    this.data.teams[teamIndex] = teamData;
+                    this.saveData();
+                }
+            } catch (error) {
+                console.warn('Ошибка отправки в Google Sheets:', error);
+                teamData.syncFailed = true;
+                
+                // Добавляем в очередь на синхронизацию
+                this.addToSyncQueue(teamData);
+                
+                // Обновляем данные
+                const teamIndex = this.data.teams.findIndex(t => t.id === teamId);
+                if (teamIndex !== -1) {
+                    this.data.teams[teamIndex] = teamData;
+                    this.saveData();
+                }
+            }
+        }
         
         this.showNotification("Команда успешно зарегистрирована!", "success");
+        return teamId;
     }
 
     // Обновление регистрации
     async updateRegistration(formData) {
-        const teamId = parseInt(document.getElementById('registrationId').value);
+        const teamId = parseInt(this.elements.registrationId.value);
         const teamIndex = this.data.teams.findIndex(t => t.id === teamId);
         
         if (teamIndex === -1) {
             throw new Error("Команда не найдена");
         }
         
+        // Сохраняем старые данные для синхронизации
+        const oldTeam = { ...this.data.teams[teamIndex] };
+        
         // Обновляем данные команды
         this.data.teams[teamIndex] = {
-            ...this.data.teams[teamIndex],
+            ...oldTeam,
             ...formData,
-            status: 'pending' // Сбрасываем статус при редактировании
+            status: 'pending', // Сбрасываем статус при редактировании
+            syncedWithSheets: false,
+            syncFailed: false,
+            syncAttempts: 0
         };
         
         this.saveData();
+        
+        // Пытаемся отправить обновление в Google Sheets
+        if (this.googleScriptURL && this.data.settings.enableSync) {
+            try {
+                await this.sendToGoogleSheets(this.data.teams[teamIndex], 'update');
+                this.data.teams[teamIndex].syncedWithSheets = true;
+                this.saveData();
+            } catch (error) {
+                console.warn('Ошибка обновления в Google Sheets:', error);
+                this.data.teams[teamIndex].syncFailed = true;
+                this.addToSyncQueue(this.data.teams[teamIndex]);
+                this.saveData();
+            }
+        }
+        
         this.showNotification("Данные команды обновлены", "success");
     }
 
@@ -476,26 +617,26 @@ class AstraTournamentApp {
         });
         
         // Проверка названия команды
-        const teamName = document.getElementById('teamName').value.trim();
+        const teamName = this.elements.teamName.value.trim();
         if (!teamName || teamName.length < 3) {
-            this.showError('teamName', 'Название команды должно быть не менее 3 символов');
+            this.showError(this.elements.teamName, 'Название команды должно быть не менее 3 символов');
             isValid = false;
         }
         
         // Проверка тега команды
-        const teamTag = document.getElementById('teamTag').value.trim().toUpperCase();
+        const teamTag = this.elements.teamTag.value.trim().toUpperCase();
         if (!teamTag || teamTag.length < 2 || teamTag.length > 6) {
-            this.showError('teamTag', 'Тег команды должен быть от 2 до 6 символов');
+            this.showError(this.elements.teamTag, 'Тег команды должен быть от 2 до 6 символов');
             isValid = false;
         }
         
         // Проверка уникальности тега
-        const teamId = document.getElementById('registrationId').value;
+        const teamId = this.elements.registrationId.value;
         const existingTeam = this.data.teams.find(t => 
             t.tag.toUpperCase() === teamTag && t.id.toString() !== teamId
         );
         if (existingTeam) {
-            this.showError('teamTag', 'Команда с таким тегом уже зарегистрирована');
+            this.showError(this.elements.teamTag, 'Команда с таким тегом уже зарегистрирована');
             isValid = false;
         }
         
@@ -532,12 +673,12 @@ class AstraTournamentApp {
         }
         
         // Проверка контактов
-        const telegram = document.getElementById('telegram').value.trim();
-        const vk = document.getElementById('vk').value.trim();
+        const telegram = this.elements.telegram.value.trim();
+        const vk = this.elements.vk.value.trim();
         
         if (!telegram && !vk) {
-            this.showError('telegram', 'Укажите хотя бы один способ связи (Telegram или ВКонтакте)');
-            this.showError('vk', 'Укажите хотя бы один способ связи (Telegram или ВКонтакте)');
+            this.showError(this.elements.telegram, 'Укажите хотя бы один способ связи (Telegram или ВКонтакте)');
+            this.showError(this.elements.vk, 'Укажите хотя бы один способ связи (Telegram или ВКонтакте)');
             isValid = false;
         }
         
@@ -564,27 +705,37 @@ class AstraTournamentApp {
         }
     }
 
+    // Очистить ошибку
+    clearError(element) {
+        element.classList.remove('error');
+        const errorElement = element.nextElementSibling?.classList?.contains('error-text') ? 
+            element.nextElementSibling : null;
+        
+        if (errorElement) {
+            errorElement.style.display = 'none';
+            errorElement.textContent = '';
+        }
+    }
+
     // Сбор данных формы
     collectFormData() {
-        const teamName = document.getElementById('teamName').value.trim();
-        const teamTag = document.getElementById('teamTag').value.trim().toUpperCase();
-        const telegram = document.getElementById('telegram').value.trim();
-        const vk = document.getElementById('vk').value.trim();
-        const email = document.getElementById('email').value.trim();
+        const teamName = this.elements.teamName.value.trim();
+        const teamTag = this.elements.teamTag.value.trim().toUpperCase();
+        const telegram = this.elements.telegram.value.trim();
+        const vk = this.elements.vk.value.trim();
+        const email = this.elements.email.value.trim();
         
         // Собираем данных об основных игроках
         const players = [];
-        for (let i = 1; i <= 5; i++) {
-            const idInput = document.querySelector(`.main-id[data-index="${i}"]`);
-            const nickInput = document.querySelector(`.main-nickname[data-index="${i}"]`);
-            
-            if (idInput && nickInput) {
-                players.push({
-                    id: idInput.value.trim(),
-                    nickname: nickInput.value.trim(),
-                    position: i
-                });
-            }
+        const mainIds = document.querySelectorAll('.main-id');
+        const mainNicks = document.querySelectorAll('.main-nickname');
+        
+        for (let i = 0; i < mainIds.length; i++) {
+            players.push({
+                id: mainIds[i].value.trim(),
+                nickname: mainNicks[i].value.trim(),
+                position: i + 1
+            });
         }
         
         // Данные о запасном игроке
@@ -608,7 +759,7 @@ class AstraTournamentApp {
 
     // Показать сообщение об успехе
     showSuccessMessage(isEditMode = false) {
-        const teamId = document.getElementById('registrationId').value || this.data.lastId;
+        const teamId = this.elements.registrationId.value || this.data.lastId;
         
         this.elements.registrationIdDisplay.textContent = `ASTRA-${teamId.toString().padStart(4, '0')}`;
         
@@ -619,37 +770,326 @@ class AstraTournamentApp {
         
         this.elements.registrationForm.reset();
         this.elements.successMessage.classList.add('active');
-        this.elements.registerTab.classList.remove('active');
+        document.getElementById('register-tab').classList.remove('active');
         
         // Сбрасываем кнопку отправки
         this.elements.submitBtn.disabled = false;
         this.elements.submitText.textContent = isEditMode ? 'Обновить заявку' : 'Отправить заявку';
         
         // Сбрасываем скрытое поле ID
-        document.getElementById('registrationId').value = '';
+        this.elements.registrationId.value = '';
     }
 
-    // Отправка данных в Google Sheets
-    async sendToGoogleSheets(teamData) {
-        const sheetsUrl = this.settings.googleSheetsUrl;
-        if (!sheetsUrl) return;
+    // ===== GOOGLE SHEETS API INTEGRATION =====
+
+    // Основная функция отправки в Google Sheets
+    async sendToGoogleSheets(teamData, action = 'register') {
+        if (!this.googleScriptURL) {
+            throw new Error('Google Sheets URL не настроен');
+        }
+        
+        if (!this.isOnline) {
+            throw new Error('Нет подключения к интернету');
+        }
+        
+        const payload = {
+            action: action,
+            data: teamData,
+            timestamp: new Date().toISOString(),
+            source: 'astra-tournament',
+            version: '1.0'
+        };
+        
+        // Используем FormData для лучшей совместимости
+        const formData = new URLSearchParams();
+        for (const [key, value] of Object.entries(payload)) {
+            formData.append(key, typeof value === 'object' ? JSON.stringify(value) : value);
+        }
         
         try {
-            const response = await fetch(sheetsUrl, {
+            // Используем fetch с no-cors для работы с Google Apps Script
+            const response = await fetch(this.googleScriptURL, {
                 method: 'POST',
+                mode: 'no-cors', // Важно для Google Apps Script
                 headers: {
-                    'Content-Type': 'application/json',
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
                 },
-                body: JSON.stringify(teamData)
+                body: formData.toString()
             });
             
-            if (!response.ok) {
-                throw new Error('Ошибка отправки в Google Sheets');
+            // В режиме no-cors мы не можем проверить статус ответа
+            // Но если нет ошибки сети - считаем успешным
+            return { success: true };
+            
+        } catch (error) {
+            console.error('Ошибка отправки в Google Sheets:', error);
+            throw new Error(`Не удалось отправить данные: ${error.message}`);
+        }
+    }
+
+    // Добавление в очередь синхронизации
+    addToSyncQueue(teamData) {
+        const syncItem = {
+            teamId: teamData.id,
+            teamName: teamData.name,
+            action: teamData.syncedWithSheets ? 'update' : 'register',
+            data: teamData,
+            attempts: 0,
+            lastAttempt: null,
+            addedAt: new Date().toISOString()
+        };
+        
+        this.syncQueue.push(syncItem);
+        this.saveSyncQueue();
+        
+        // Показываем уведомление о добавлении в очередь
+        if (this.elements.syncStatusCard) {
+            this.elements.syncStatusCard.style.display = 'block';
+        }
+    }
+
+    // Функция синхронизации очереди
+    async syncQueueWithSheets() {
+        if (!this.googleScriptURL || !this.data.settings.enableSync || !this.isOnline) {
+            return;
+        }
+        
+        if (this.syncQueue.length === 0) {
+            return;
+        }
+        
+        console.log(`Синхронизация ${this.syncQueue.length} элементов с Google Sheets...`);
+        
+        // Обновляем статус синхронизации
+        this.updateSyncStatus('syncing');
+        
+        const failedItems = [];
+        
+        for (const item of this.syncQueue) {
+            try {
+                item.attempts++;
+                item.lastAttempt = new Date().toISOString();
+                
+                await this.sendToGoogleSheets(item.data, item.action);
+                
+                // Отмечаем как синхронизированное в основном массиве
+                const teamIndex = this.data.teams.findIndex(t => t.id === item.teamId);
+                if (teamIndex !== -1) {
+                    this.data.teams[teamIndex].syncedWithSheets = true;
+                    this.data.teams[teamIndex].syncFailed = false;
+                }
+                
+                this.showNotification(`Команда "${item.teamName}" синхронизирована с Google Sheets`, 'success');
+                
+            } catch (error) {
+                console.error(`Ошибка синхронизации команды ${item.teamName}:`, error);
+                item.syncFailed = true;
+                
+                // Если было больше 3 попыток, удаляем из очереди
+                if (item.attempts >= 3) {
+                    console.warn(`Превышено количество попыток для команды ${item.teamName}`);
+                    
+                    // Помечаем в основном массиве
+                    const teamIndex = this.data.teams.findIndex(t => t.id === item.teamId);
+                    if (teamIndex !== -1) {
+                        this.data.teams[teamIndex].syncFailed = true;
+                    }
+                } else {
+                    failedItems.push(item);
+                }
             }
             
-            console.log('Данные отправлены в Google Sheets');
-        } catch (error) {
-            console.error('Ошибка при отправке в Google Sheets:', error);
+            // Задержка между запросами
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        // Обновляем очередь
+        this.syncQueue = failedItems;
+        this.saveSyncQueue();
+        
+        // Сохраняем обновленные данные команд
+        this.saveData();
+        
+        // Обновляем UI
+        this.updateUI();
+        this.updateSyncStatus(this.syncQueue.length > 0 ? 'partial' : 'success');
+        
+        if (this.syncQueue.length === 0) {
+            this.showNotification('Все данные синхронизированы с Google Sheets', 'success');
+        }
+    }
+
+    // Обновление статуса синхронизации
+    updateSyncStatus(status = 'checking') {
+        if (!this.elements.syncStatusCard) return;
+        
+        this.elements.syncStatusCard.style.display = 'block';
+        
+        const statusConfig = {
+            checking: {
+                icon: 'sync-alt',
+                iconClass: 'sync-pending',
+                text: 'Проверка подключения...',
+                color: 'warning'
+            },
+            offline: {
+                icon: 'wifi-slash',
+                iconClass: 'sync-error',
+                text: 'Офлайн режим',
+                color: 'danger',
+                info: 'Данные сохраняются локально. Синхронизация произойдет при подключении к интернету.'
+            },
+            no_config: {
+                icon: 'cog',
+                iconClass: 'sync-error',
+                text: 'Google Sheets не настроен',
+                color: 'warning',
+                info: 'Для синхронизации с Google Sheets настройте подключение в админ-панели.'
+            },
+            success: {
+                icon: 'check-circle',
+                iconClass: 'sync-ok',
+                text: 'Синхронизировано',
+                color: 'success',
+                info: 'Все данные синхронизированы с Google Sheets.'
+            },
+            partial: {
+                icon: 'exclamation-triangle',
+                iconClass: 'sync-pending',
+                text: 'Частично синхронизировано',
+                color: 'warning',
+                info: `${this.syncQueue.length} элементов ожидают синхронизации.`
+            },
+            syncing: {
+                icon: 'sync-alt',
+                iconClass: 'sync-pending spinning',
+                text: 'Синхронизация...',
+                color: 'warning',
+                info: `Синхронизация ${this.syncQueue.length} элементов с Google Sheets.`
+            },
+            error: {
+                icon: 'times-circle',
+                iconClass: 'sync-error',
+                text: 'Ошибка синхронизации',
+                color: 'danger',
+                info: 'Не удалось подключиться к Google Sheets. Проверьте настройки.'
+            }
+        };
+        
+        const config = statusConfig[status] || statusConfig.error;
+        
+        // Обновляем иконку
+        const icon = this.elements.sheetsSyncIcon;
+        icon.className = `fas fa-${config.icon} ${config.iconClass}`;
+        
+        // Обновляем текст
+        this.elements.sheetsStatus.innerHTML = `<strong style="color: var(--${config.color})">${config.text}</strong>`;
+        
+        // Обновляем информацию
+        if (config.info) {
+            this.elements.syncInfo.textContent = config.info;
+        }
+        
+        // Автоматически определяем статус если не указан
+        if (status === 'checking') {
+            if (!this.googleScriptURL) {
+                this.updateSyncStatus('no_config');
+            } else if (!this.isOnline) {
+                this.updateSyncStatus('offline');
+            } else if (this.syncQueue.length > 0) {
+                this.updateSyncStatus('partial');
+            } else {
+                // Проверяем есть ли несинхронизированные команды
+                const unsyncedTeams = this.data.teams.filter(team => !team.syncedWithSheets);
+                if (unsyncedTeams.length > 0) {
+                    // Добавляем в очередь
+                    unsyncedTeams.forEach(team => {
+                        if (!this.syncQueue.find(item => item.teamId === team.id)) {
+                            this.addToSyncQueue(team);
+                        }
+                    });
+                    this.updateSyncStatus('partial');
+                } else {
+                    this.updateSyncStatus('success');
+                }
+            }
+        }
+    }
+
+    // Запуск службы синхронизации
+    startSyncService() {
+        // Первая проверка
+        this.updateSyncStatus();
+        
+        // Синхронизация при загрузке если есть очередь
+        if (this.syncQueue.length > 0 && this.isOnline) {
+            setTimeout(() => this.syncQueueWithSheets(), 3000);
+        }
+        
+        // Периодическая синхронизация каждые 5 минут
+        setInterval(() => {
+            if (this.isOnline && this.googleScriptURL && this.data.settings.enableSync) {
+                this.syncQueueWithSheets();
+            }
+        }, 5 * 60 * 1000);
+        
+        // Синхронизация при восстановлении подключения
+        window.addEventListener('online', () => {
+            this.isOnline = true;
+            this.updateSyncStatus();
+            
+            if (this.googleScriptURL && this.data.settings.enableSync) {
+                setTimeout(() => this.syncQueueWithSheets(), 2000);
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            this.isOnline = false;
+            this.updateSyncStatus('offline');
+        });
+    }
+
+    // Настройка проверки онлайн-статуса
+    setupOnlineCheck() {
+        this.isOnline = navigator.onLine;
+        
+        // Показываем уведомление при изменении статуса
+        window.addEventListener('online', () => {
+            this.isOnline = true;
+            this.showNotification('Подключение к интернету восстановлено', 'success');
+        });
+        
+        window.addEventListener('offline', () => {
+            this.isOnline = false;
+            this.showNotification('Потеряно подключение к интернету. Данные сохраняются локально.', 'warning');
+        });
+    }
+
+    // Получение IP пользователя
+    async getUserIP() {
+        try {
+            // Пробуем несколько сервисов
+            const services = [
+                'https://api.ipify.org?format=json',
+                'https://api64.ipify.org?format=json',
+                'https://ipinfo.io/json'
+            ];
+            
+            for (const service of services) {
+                try {
+                    const response = await fetch(service, { timeout: 3000 });
+                    if (response.ok) {
+                        const data = await response.json();
+                        return data.ip || data.ip_address || 'unknown';
+                    }
+                } catch {
+                    continue;
+                }
+            }
+            
+            return 'unknown';
+        } catch {
+            return 'unknown';
         }
     }
 
@@ -687,14 +1127,47 @@ class AstraTournamentApp {
         };
         return badgeMap[status] || status.toUpperCase();
     }
-
-    getUserIP() {
-        // В реальном приложении IP должен получаться с сервера
-        return 'local-' + Math.random().toString(36).substr(2, 9);
-    }
 }
 
 // Инициализация приложения при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new AstraTournamentApp();
+    
+    // Глобальные функции для отладки
+    window.debugApp = {
+        getData: () => window.app.data,
+        getTeams: () => window.app.data.teams,
+        getSyncQueue: () => window.app.syncQueue,
+        forceSync: () => window.app.syncQueueWithSheets(),
+        clearData: () => {
+            if (confirm('Очистить все данные?')) {
+                localStorage.clear();
+                location.reload();
+            }
+        },
+        testSheets: async () => {
+            if (!window.app.googleScriptURL) {
+                alert('Google Sheets URL не настроен');
+                return;
+            }
+            
+            try {
+                const testData = {
+                    id: 999,
+                    name: 'Test Team',
+                    tag: 'TEST',
+                    players: [{ id: 'TEST1', nickname: 'Test Player 1', position: 1 }],
+                    reservePlayer: { id: 'TEST2', nickname: 'Test Reserve' },
+                    contacts: { telegram: '@test', vk: '', email: 'test@example.com' },
+                    status: 'pending',
+                    registrationDate: new Date().toLocaleDateString('ru-RU')
+                };
+                
+                const result = await window.app.sendToGoogleSheets(testData, 'register');
+                alert('Тест успешен! Проверьте Google Sheets.');
+            } catch (error) {
+                alert('Тест не удался: ' + error.message);
+            }
+        }
+    };
 });
